@@ -4,6 +4,7 @@ from optparse import OptionParser
 
 # Import local modules
 import config
+import worker
 
 
 # Configure option parser
@@ -17,10 +18,10 @@ parser.add_option("-c", "--workers", dest="workers",
 # Run this as an executable
 if __name__ == '__main__':
     if options.workers is None:
-        worker.Notifier.run(config.workers_min)
+        worker.Notifier.run(config.service.workers_min)
     else:
-        if options.workers <= config.workers_min and options.workers >= config.workers_max:
+        if options.workers <= config.service.workers_min and options.workers >= config.service.workers_max:
             worker.Notifier.run(options.workers)
         else:
-            print "Invalid value for workers, it should be from %d to %d" % (config.workers_min,
-                                                                             config.workers_max)
+            print "Invalid value for workers, it should be from %d to %d" % (config.service.workers_min,
+                                                                             config.service.workers_max)
