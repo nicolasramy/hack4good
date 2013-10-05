@@ -19,9 +19,13 @@ parser.add_option("-c", "--workers", dest="workers",
 if __name__ == '__main__':
     if options.workers is None:
         worker.Notifier.run(config.service.workers_min)
+
     else:
-        if options.workers <= config.service.workers_min and options.workers >= config.service.workers_max:
-            worker.Notifier.run(options.workers)
+        workers = int(options.workers)
+
+        if workers >= config.service.workers_min and workers <= config.service.workers_max:
+            worker.Notifier.run(workers)
+
         else:
             print "Invalid value for workers, it should be from %d to %d" % (config.service.workers_min,
                                                                              config.service.workers_max)
