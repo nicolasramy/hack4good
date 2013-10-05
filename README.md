@@ -55,10 +55,18 @@ The main idea of this mockup application is about enabling people to do so, the 
 * postgresql 9.1+
 * python 2.7
 * pip
+* libpq-dev
 
 ### Python requirements:
 * virtualenv
-* SQLAlchemy
 * flask-restful
+* psycopg2
+* SQLAlchemy
+* sqlacodegen (optional)
 
 pip install PACKAGE_NAME
+
+
+### sqlacodegen
+
+example: sqlacodegen postgresql:///DATABASE_NAME
