@@ -1,12 +1,9 @@
 # -*- coding: utf-8 -*-
 # Import core modules
-import sys
-import os
-import json
 from optparse import OptionParser
 
 # Import local modules
-import config.service as config
+import config
 
 
 # Configure option parser
