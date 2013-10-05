@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Import core modules
 import sys
 import os
