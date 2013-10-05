@@ -8,7 +8,7 @@ from the 4th to the 7th of October 2013
 --------------------------------
 
 While commuting (using public transports like suburban train or metro),
-one might want to chat easily with one or more people around.
+one might want to chat easily with people around.
 The main idea of this mockup application is about enabling people to do so, the easiest way possible.
 
 1) Application Deployment (Android device)
