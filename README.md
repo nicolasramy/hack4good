@@ -50,9 +50,23 @@ The main idea of this mockup application is about enabling people to do so, the 
 
 ## 2) Backoffice
 
-### Requirements:
+### System requirements:
 
-- postgresql 9.1+
-- python 2.7
-- pip
-- virtualenv
+* postgresql 9.1+
+* python 2.7
+* pip
+* libpq-dev
+
+### Python requirements:
+* virtualenv
+* flask-restful
+* psycopg2
+* SQLAlchemy
+* sqlacodegen (optional)
+
+pip install PACKAGE_NAME
+
+
+### sqlacodegen
+
+example: sqlacodegen postgresql:///DATABASE_NAME
