@@ -81,6 +81,7 @@ class User(Base):
     email = Column(String(255))
     md5_hash = Column(String(64))
     photo_path = Column(String(255))
+    connected = Column(Boolean)
     created_at = Column(DateTime)
     last_accessed_at = Column(DateTime)
 
