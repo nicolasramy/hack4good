@@ -1,18 +1,16 @@
-Commute 4 Good [NAME PROPOSAL]
-========================
+# Commute 4 Good [NAME PROPOSAL]
 
 Hack4good session organized by #Geekli.st in partnership with #Gandi at #Deezer in Paris
 from the 4th to the 7th of October 2013
 
-0) tl;dr
---------------------------------
+## 0) tl;dr
+
 
 While commuting (using public transports like suburban train or metro),
 one might want to chat easily with people around.
 The main idea of this mockup application is about enabling people to do so, the easiest way possible.
 
-1) Application Deployment (Android device)
---------------------------------
+## 1) Application Deployment (Android device)
 
 * Download [Apache Cordava Package] (http://cordova.apache.org/#download)
 
@@ -49,3 +47,12 @@ The main idea of this mockup application is about enabling people to do so, the 
     `cordova emulate android`
 
 * Update basic plain HTML, JavaScript and CSS files which have been added to /cordova/www
+
+## 2) Backoffice
+
+### Requirements:
+
+- postgresql 9.1+
+- python 2.7
+- pip
+- virtualenv
