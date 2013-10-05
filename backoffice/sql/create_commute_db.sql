@@ -59,6 +59,9 @@ CREATE TABLE users (
     photo_path varchar(255),
     created_at timestamp,
     last_accessed_at timestamp,
+    lon float4, 
+    lat float4, 
+    connected boolean,
     CONSTRAINT users_pkey PRIMARY KEY (id)
 );
 
