@@ -83,6 +83,8 @@ class User(Base):
     photo_path = Column(String(255))
     created_at = Column(DateTime)
     last_accessed_at = Column(DateTime)
+    lon = Column(Float)
+    lat = Column(Float)
     connected = Column(Boolean)
 
 
