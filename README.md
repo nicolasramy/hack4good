@@ -61,8 +61,10 @@ The main idea of this mockup application is about enabling people to do so, the 
 * virtualenv
 * flask-restful
 * psycopg2
-* SQLAlchemy
+* sqlalchemy
 * sqlacodegen (optional)
+* Faker
+* numpy
 
 pip install PACKAGE_NAME
 
