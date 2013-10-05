@@ -20,10 +20,10 @@ parser.add_option("-c", "--workers", dest="workers",
 # Run this as an executable
 if __name__ == '__main__':
     if options.workers is None:
-        print "Do the job with min workers"
+        worker.Notifier.run(config.workers_min)
     else:
         if options.workers <= config.workers_min and options.workers >= config.workers_max:
-            print "Do some stuff"
+            worker.Notifier.run(options.workers)
         else:
             print "Invalid value for workers, it should be from %d to %d" % (config.workers_min,
                                                                              config.workers_max)
