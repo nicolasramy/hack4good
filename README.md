@@ -50,9 +50,15 @@ The main idea of this mockup application is about enabling people to do so, the 
 
 ## 2) Backoffice
 
-### Requirements:
+### System requirements:
 
-- postgresql 9.1+
-- python 2.7
-- pip
-- virtualenv
+* postgresql 9.1+
+* python 2.7
+* pip
+
+### Python requirements:
+* virtualenv
+* SQLAlchemy
+* flask-restful
+
+pip install <package-name>
