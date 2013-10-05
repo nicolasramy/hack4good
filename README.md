@@ -61,4 +61,4 @@ The main idea of this mockup application is about enabling people to do so, the 
 * SQLAlchemy
 * flask-restful
 
-pip install <package-name>
+pip install PACKAGE_NAME
