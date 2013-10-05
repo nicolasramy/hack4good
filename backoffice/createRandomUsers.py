@@ -45,7 +45,7 @@ if __name__ == '__main__':
 	Session = sessionmaker(bind=engine)
 	session = Session()
 	myCoords = {'lon':48.88, 'lat':2.33}
-	radius = 0.1
+	radius = 1.0
 	createRandomUsers(session, 10, myCoords, radius)
 	connected_users = session.query(commute4good.User).filter_by(connected=True)
 	print "Connected users: %d" % connected_users.count()
