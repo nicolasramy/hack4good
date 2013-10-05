@@ -29,13 +29,11 @@ def run(processing_concurrency=config.service.workers_min):
     Session = sessionmaker(bind=engine)
     session = Session()
 
+    # Retrieve connected users
     connected_users = session.query(commute4good.User).filter_by(connected=True)
 
-    print "Connected users: %d" % connected_users.count()
-    sys.exit(1)
-
     for user in connected_users:
-        print user
+        print "Compute nearest users from user %s" % user
     sys.exit(1)
 
     # Create a queue for data to be inserted in a multiprocessing pool
