@@ -50,7 +50,7 @@ The main idea of this mockup application is about enabling people to do so, the 
 
 ## 2) Backoffice
 
-### Requierements:
+### Requirements:
 
 - postgresql 9.1+
 - python 2.7
