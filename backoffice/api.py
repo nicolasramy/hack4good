@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import sys
+import datetime
 
 # Flask
 from flask import Flask, request, jsonify, make_response, abort
@@ -57,7 +58,7 @@ def new_position():
 
     # Save
 
-    return jsonify(geolocation), 201
+    return jsonify(geolocation), 200
 
 
 @api.route('/users/<int:profil_id>', methods=['GET'])
@@ -120,63 +121,42 @@ def user_profil(profil_id):
 
     return jsonify(data)
 
-#
-## /users
-#class Users(Resource):
-#    def get(self, user_id):
-#        #return {user_id: users[user_id]}
-#        return {user_id: 'profil'}
-#
-#    def post(self, user_id):
-#        if user_id is not None:
-#            return {user_id: "404"}
-#        else:
-#            return {user_id: "Welcome X"}
-#
-#    def put(self, user_id):
-#        return {user_id: "updated"}
-#
-#    def delete(self, user_id):
-#        return {user_id: "disabled function for instance"}
-#
-#api.add_resource(Users, '/users/<int:user_id>')
-#
-#
-## /users/login
-#class UsersLogin(Resource):
-#    # Authentificate users
-#    def get(self):
-#        return {"Authentification failed"}
-#
-#api.add_resource(UsersLogin, '/users/<int:user_id>')
-#
-#
-## /users/nearest
-#class UsersNearest(Resource):
-#    # Find users
-#    def get(self):
-#        return {"No one found there."}
-#
-#api.add_resource(UsersNearest, '/users/nearest/<int:user_id>')
-#
-#
-## /tags
-#class Tags(Resource):
-#    # Add tags
-#    def post(self):
-#        return {"May, the 4th be with you"}
-#
-#api.add_resource(Tags, '/tags/')
-#
-#
-## /geoposition
-#class Geoposition(Resource):
-#    # Update position
-#    def post(self):
-#        return {"Why are you moving so fast ?!"}
-#
-#api.add_resource(Geoposition, '/geoposition/')
+
+@api.route('/tags', methods=['POST'])
+def new_tag():
+    if not request.json or not 'user_id' in request.json or not 'name' in request.json:
+        abort(400)
+
+    tag = pg_session.query(commute4good.Tag).filter(commute4good.Tag.name.like("%" + request.json['name'] + "%")).first()
+
+    if tag is None:
+        # Create a new Tag
+        _tag = commute4good.Tag()
+        _tag.name = request.json['name']
+        pg_session.add(_tag)
+        pg_session.commit()
+        tag = _tag
+
+    # TODO: Check existence before save
+    # Create jointure
+    _user_tag = commute4good.UsersTag()
+    _user_tag.user_id = request.json['user_id']
+    _user_tag.tag_id = tag.id
+    _user_tag.added_at = datetime.datetime.now()
+    pg_session.add(_user_tag)
+    pg_session.commit()
+
+    data = {
+        "id": _user_tag.id,
+        "user_id": _user_tag.user_id,
+        "tag_id": _user_tag.tag_id,
+        "name": tag.name,
+        "description": tag.description,
+        "popularity": tag.popularity,
+        "added_at": _user_tag.added_at
+    }
+
+    return jsonify(data), 200
 
 if __name__ == '__main__':
     api.run(debug=True)
-
