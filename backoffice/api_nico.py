@@ -179,5 +179,75 @@ def new_tag():
 
     return jsonify(data), 200
 
+
+@api.route('/users', methods=['PUT'])
+def update_user():
+
+    if not request.json or not 'user_id':
+        abort(400)
+
+    user = pg_session.query(commute4good.User).filter_by(id=request.json['user_id']).first()
+
+    if user is None:
+        return jsonify({"error": "Not found"}), 404
+
+    # TODO: Check user authorization -> 403 on failure
+
+    _user = {}
+    try:
+        if request.json['firstname'] != "":
+            user.firstname = request.json['firstname']
+    except Exception:
+        pass
+
+    try:
+        if request.json['lastname'] != "":
+            user.firstname = request.json['lastname']
+    except Exception:
+        pass
+
+    try:
+        if request.json['pseudo'] != "":
+            user.firstname = request.json['pseudo']
+    except Exception:
+        pass
+
+    try:
+        if request.json['email'] != "":
+            user.firstname = request.json['email']
+    except Exception:
+        pass
+
+    try:
+        if request.json['md5_hash'] != "":
+            user.firstname = request.json['md5_hash']
+    except Exception:
+        pass
+
+    try:
+        if request.json['photo_path'] != "":
+            user.firstname = request.json['photo_path']
+    except Exception:
+        pass
+
+    pg_session.add(user)
+    pg_session.commit()
+
+    data = {
+        "id": user.id,
+        "firstname": user.firstname,
+        "lastname": user.lastname,
+        "pseudo": user.pseudo,
+        "email": user.email,
+        "photo_path": user.photo_path,
+        "created_at": user.created_at,
+        "last_accessed_at": user.last_accessed_at,
+        "lon": user.lon,
+        "lat": user.lat,
+        "connected": user.connected
+    }
+
+    return jsonify(data)
+
 if __name__ == '__main__':
     api.run(debug=True)
