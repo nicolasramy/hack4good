@@ -30,6 +30,7 @@ step_user_tags = 3
 
 if __name__ == '__main__':
 
+    config.postgres.password="bddvcub"
     # Bind engine on PostgreSQL
     engine = create_engine("postgresql://%s:%s@%s:%s/%s" % (config.postgres.username,
                                                             config.postgres.password,
