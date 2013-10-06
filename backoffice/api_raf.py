@@ -8,13 +8,47 @@ from flask import Flask, request, jsonify, make_response, abort
 # SQL Alchemy
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-
 import config
 from model import commute4good
+
+# Computes distance
+from numpy import arccos, arcsin, cos, sin, sqrt, pi
+from datetime import datetime
+
+LAT_REF = 48.8
+COS_LATITUDE = cos(LAT_REF)
+DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 
 # Flask Application
 api = Flask(__name__)
 
+# Specific local password
+config.postgres.password = "bddvcub"
+
+
+def distance_GPS(latlon1, latlon2, method = 'method1', clat = COS_LATITUDE):
+    """Take as argument two couples of lat,lon coordinates (tuple or list).
+       Return the distance between the points, in km (float).
+       Two method are available (the first per default), and a linear method is available too (we consider the area where the points are as a plane).
+       This optional method need cos(medium_latitude), medium_latitude is a latitude not so far from the tested points.
+    """
+    lat1 = latlon1[0]
+    lon1 = latlon1[1]
+    lat2 = latlon2[0]
+    lon2 = latlon2[1]
+
+    if method == 'method1':
+        dist_GPS = arccos( sin(lat1*pi/180)*sin(lat2*pi/180) + cos(lat1*pi/180)*cos(lat2*pi/180)*cos(lon1*pi/180-lon2*pi/180) ) * 6366
+    
+    elif method == 'method2':
+        a = sin((lat1*pi/180-lat2*pi/180)/2)
+        b = cos(lat1*pi/180) * cos(lat2*pi/180) * sin( (lon1*pi/180- lon2*pi/180)/2 )
+        dist_GPS = 2*arcsin( sqrt( a**2 + b**2 )) * 6366
+
+    elif method == 'linear':
+        dist_GPS = sqrt(((111.1*(lat2-lat1))**2)+((111.1*clat*(lon2-lon1))**2))
+
+    return dist_GPS
 
 @api.errorhandler(400)
 def not_found(error):
@@ -81,6 +115,48 @@ def new_position():
 
     return jsonify(geolocation), 200
 
+
+@api.route('/users/nearest/<int:profile_id>', methods=['GET'])
+def nearest_neighbour(profile_id):
+
+    max_distance = 0.5  # return users closer than 500m
+
+    ref_user = pg_session.query(commute4good.User).filter_by(id=profile_id).first()
+
+    if ref_user is None:
+        return jsonify({"error": "Not found"}), 404
+
+    connected_users = pg_session.query(commute4good.User).filter_by(connected=True)
+    data = {}
+    neighbours = []
+    for user in connected_users:
+        latlon1 = [ref_user.lat, ref_user.lon]
+        latlon2 = [user.lat, user.lon]
+        d = distance_GPS(latlon1,latlon2,'linear')
+        # d > 1m to avoid returning the requesting user itself
+        if d < max_distance and d > 0.001:  
+            # a good thing to stringify every field to avoid returning a postgres
+            # keyword when field is eg. 'null' or 'true'
+            item = {
+                "id": str(user.id),
+                "firstname": str(user.firstname),
+                "lastname": str(user.lastname),
+                "pseudo": str(user.pseudo),
+                "email": str(user.email),
+                "photo_path": str(user.photo_path),
+                "created_at": str(user.created_at.strftime(DATE_FORMAT)),
+                "last_accessed_at": str(user.last_accessed_at.strftime(DATE_FORMAT)),
+                "lon": str(user.lon),
+                "lat": str(user.lat),
+                "connected": str(user.connected),
+                "distance_km": str(d)
+            }
+            neighbours.append(item)
+
+    data['nearest_neighbours'] =  sorted(neighbours,
+        key=lambda neighbour: neighbour['distance_km'])
+
+    return jsonify(data)
 
 @api.route('/users/<int:profil_id>', methods=['GET'])
 def user_profil(profil_id):
@@ -178,6 +254,7 @@ def new_tag():
     }
 
     return jsonify(data), 200
+
 
 if __name__ == '__main__':
     api.run(debug=True)
