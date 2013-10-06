@@ -60,24 +60,63 @@ def new_position():
     return jsonify(geolocation), 201
 
 
-@api.route('/users/<int:user_id>', methods=['GET'])
-def user_profil(user_id):
+@api.route('/users/<int:profil_id>', methods=['GET'])
+def user_profil(profil_id):
 
-    users = pg_session.query(commute4good.User).filter_by(id=user_id)
+    user = pg_session.query(commute4good.User).filter_by(id=profil_id).first()
+
+    if user is None:
+        return jsonify({"error": "Not found"}), 404
 
     data = {
-        "id": users[0].id,
-        "firstname": users[0].firstname,
-        "lastname": users[0].lastname,
-        "pseudo": users[0].pseudo,
-        "email": users[0].email,
-        "photo_path": users[0].photo_path,
-        "created_at": users[0].created_at,
-        "last_accessed_at": users[0].last_accessed_at,
-        "lon": users[0].lon,
-        "lat": users[0].lat,
-        "connected": users[0].connected
+        "id": user.id,
+        "firstname": user.firstname,
+        "lastname": user.lastname,
+        "pseudo": user.pseudo,
+        "email": user.email,
+        "photo_path": user.photo_path,
+        "created_at": user.created_at,
+        "last_accessed_at": user.last_accessed_at,
+        "lon": user.lon,
+        "lat": user.lat,
+        "connected": user.connected
     }
+
+    user_badges = pg_session.query(commute4good.UsersBadge).filter_by(user_id=profil_id)
+    badges = []
+    for user_badge in user_badges:
+        badge = pg_session.query(commute4good.Badge).filter_by(id=user_badge.badge_id).first()
+
+        if badge is not None:
+            item = {
+                "id": badge.id,
+                "name": badge.name,
+                "description": badge.description,
+                "icon_path": badge.icon_path,
+                "created_at": badge.icon_path,
+                "last_earned_at": badge.last_earned_at,
+                "popularity": badge.popularity,
+                "min_interactions": badge.min_interactions,
+            }
+            badges.append(item)
+
+    data["badges"] = badges
+
+    user_tags = pg_session.query(commute4good.UsersTag).filter_by(user_id=profil_id)
+    tags = []
+    for user_tag in user_tags:
+        tag = pg_session.query(commute4good.Tag).filter_by(id=user_tag.tag_id).first()
+
+        if tag is not None:
+            item = {
+                "id": tag.id,
+                "name": tag.name,
+                "description": tag.description,
+                "popularity": tag.popularity
+            }
+            tags.append(item)
+
+    data["tags"] = tags
 
     return jsonify(data)
 
