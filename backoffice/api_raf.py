@@ -51,15 +51,57 @@ Session = sessionmaker(bind=engine)
 pg_session = Session()
 
 
+@api.route('/geolocation2/<string:str>', methods=['GET'])
+def geolocation2(str):
+    params = str.split("-")
+    # Check User
+    uid = params[0]
+    lat = params[1]
+    lon = params[2]
+    user = pg_session.query(commute4good.User).filter_by(id=uid).first()
+    if user is None:
+        return jsonify({"error": "Not found2"}), 403
+
+    # Update user position
+    user.lon = lon
+    user.lat = lat
+    user.last_accessed_at = datetime.datetime.now()
+    pg_session.add(user)
+    pg_session.commit()
+
+    # Create log
+    geolocation = commute4good.Geolocation()
+    geolocation.user_id = user.id
+    geolocation.lon = lon
+    geolocation.lat = lat
+    geolocation.created_at = datetime.datetime.now()
+    pg_session.add(geolocation)
+    pg_session.commit()
+
+    # Prepare response data
+    data = {
+        "id": geolocation.id,
+        "user_id": geolocation.user_id,
+        "lon": geolocation.lon,
+        "lat": geolocation.lat,
+        "created_at": geolocation.created_at.strftime(DATE_FORMAT)
+    }
+
+    # Send data jsonified as response
+    return jsonify(data), 200
+
+
+
 @api.route('/geolocation', methods=['POST'])
 def new_position():
     if not request.json or not 'user_id' in request.json or not 'lon' in request.json or not 'lat' in request.json:
         abort(400)
 
     # Check User
+    uid = int(request.json['user_id'])
     user = pg_session.query(commute4good.User).filter_by(id=int(request.json['user_id'])).first()
     if user is None:
-        return jsonify({"error": "Not found"}), 403
+        return jsonify({"error": "Not found2"}), 403
 
     # Update user position
     user.lon = request.json['lon']
@@ -88,7 +130,7 @@ def new_position():
 
     # Send data jsonified as response
     return jsonify(data), 200
-
+    
 
 @api.route('/users/<int:profil_id>', methods=['GET'])
 def user_profil(profil_id):
@@ -155,43 +197,47 @@ def user_profil(profil_id):
     return jsonify(data)
 
 
-@api.route('/tags', methods=['POST'])
-def new_tag():
-    if not request.json or not 'user_id' in request.json or not 'name' in request.json:
-        abort(400)
 
-    tag = pg_session.query(commute4good.Tag).filter(commute4good.Tag.name.like("%" + request.json['name'] + "%")).first()
+@api.route('/users/nearest/<int:profile_id>', methods=['GET'])
+def nearest_neighbour(profile_id):
 
-    if tag is None:
-        # Create a new Tag
-        _tag = commute4good.Tag()
-        _tag.name = request.json['name']
-        pg_session.add(_tag)
-        pg_session.commit()
-        tag = _tag
+    max_distance = 1.0          # return users closer than 1000m
+    max_returned_users = 10     # return at max 50 users
 
-    # TODO: Check existence before save
-    # Create jointure
-    user_tag = commute4good.UsersTag()
-    user_tag.user_id = request.json['user_id']
-    user_tag.tag_id = tag.id
-    user_tag.added_at = datetime.datetime.now()
-    pg_session.add(user_tag)
-    pg_session.commit()
+    ref_user = pg_session.query(commute4good.User).filter_by(id=profile_id).first()
 
-    # Prepare response data
-    data = {
-        "id": user_tag.id,
-        "user_id": user_tag.user_id,
-        "tag_id": user_tag.tag_id,
-        "name": tag.name,
-        "description": tag.description,
-        "popularity": tag.popularity,
-        "added_at": user_tag.added_at.strftime(DATE_FORMAT)
-    }
+    if ref_user is None:
+        return jsonify({"error": "Not found"}), 404
 
-    # Send data jsonified as response
-    return jsonify(data), 200
+    connected_users = pg_session.query(commute4good.User).filter_by(connected=True)
+    data = {}
+    neighbours = []
+    for user in connected_users:
+        latlon1 = [ref_user.lat, ref_user.lon]
+        latlon2 = [user.lat, user.lon]
+        d = distance_GPS(latlon1, latlon2, 'linear')
+        # d > 1m to avoid returning the requesting user itself
+        if d < max_distance and d > 0.001:
+            # a good thing to stringify every field to avoid returning a postgres
+            # keyword when field is eg. 'null' or 'true'
+            item = {
+                "id": str(user.id),
+                "firstname": str(user.firstname),
+                "lastname": str(user.lastname),
+                "pseudo": str(user.pseudo),
+                "email": str(user.email),
+                "photo_path": str(user.photo_path),
+                "created_at": str(user.created_at.strftime(DATE_FORMAT)),
+                "last_accessed_at": str(user.last_accessed_at.strftime(DATE_FORMAT)),
+                "lon": str(user.lon),
+                "lat": str(user.lat),
+                "connected": str(user.connected),
+                "distance_km": str(d)
+            }
+            neighbours.append(item)
+
+    data['nearest_neighbours'] = sorted(neighbours, key=lambda neighbour: neighbour['distance_km'])[:max_returned_users]
+    return jsonify(data)
 
 
 @api.route('/users', methods=['PUT'])
@@ -266,6 +312,48 @@ def update_user():
     return jsonify(data)
 
 
+
+
+
+@api.route('/tags', methods=['POST'])
+def new_tag():
+    if not request.json or not 'user_id' in request.json or not 'name' in request.json:
+        abort(400)
+
+    tag = pg_session.query(commute4good.Tag).filter(commute4good.Tag.name.like("%" + request.json['name'] + "%")).first()
+
+    if tag is None:
+        # Create a new Tag
+        _tag = commute4good.Tag()
+        _tag.name = request.json['name']
+        pg_session.add(_tag)
+        pg_session.commit()
+        tag = _tag
+
+    # TODO: Check existence before save
+    # Create jointure
+    user_tag = commute4good.UsersTag()
+    user_tag.user_id = request.json['user_id']
+    user_tag.tag_id = tag.id
+    user_tag.added_at = datetime.datetime.now()
+    pg_session.add(user_tag)
+    pg_session.commit()
+
+    # Prepare response data
+    data = {
+        "id": user_tag.id,
+        "user_id": user_tag.user_id,
+        "tag_id": user_tag.tag_id,
+        "name": tag.name,
+        "description": tag.description,
+        "popularity": tag.popularity,
+        "added_at": user_tag.added_at.strftime(DATE_FORMAT)
+    }
+
+    # Send data jsonified as response
+    return jsonify(data), 200
+
+
 @api.route('/users/login', methods=['POST'])
 def create_token():
     # Check User identification
@@ -303,12 +391,13 @@ def create_token():
     # Send data jsonified as response
     return jsonify(data)
 
-@api.route('/notification2/<int:profile_id>', methods=['GET'])
-def notification2(profile_id):
-    if profile_id == 8:
+
+@api.route('/notification2/<int:receiver_id>', methods=['GET'])
+def notification2(receiver_id):
+    if receiver_id == 8:
         regId = "APA91bFjTwhIKqpMrfkItWIn8RHbA3HHHvGjdhs8iRURQ3n2SY6cV30cPw2-CEfAjLWFgYpTc57-X4t2PLXec2ZLGQs2kxTPNejqBrWumOdzHvqZT9qbuo9Y4JFqcROa5dVSMduRxpC9qQtZpdtmV4WanOllaLej6b8Z5ZbklFCQ9m3pe9hUc30"
         pseudo = "Iva"
-    if profile_id == 9:
+    if receiver_id == 9:
         regId = "APA91bG6Gc4l753AzdAaAUUGvxY_dsXQJJbI78Qtq7K0VCjrxSEQL3ubfgL-iTHqzHlk5362qTaZrQi-kSb9Nyd6aNr3xzapSFcJA-K3qUYk-_TuwNgMTwpdtZIACNJAvgUMzZZqN_EAooMmXLSDkNUAeGhIhTV2xw"
         pseudo = "Martine"
     
@@ -319,7 +408,42 @@ def notification2(profile_id):
     
     return "yo notification2"
 
+@api.route('/notification3/<int:sender_id>/<int:receiver_id>/', methods=['GET'])
+def notification3(sender_id, receiver_id):
+    # Search users
+    sender = pg_session.query(commute4good.User).filter_by(id=int(request.json['sender_id'])).first()
+    receiver = pg_session.query(commute4good.User).filter_by(id=int(request.json['receiver_id'])).first()
 
+     # User not found
+    if receiver is None:
+        return jsonify({"error": "Not found"}), 403
+
+    if receiver_id == 8:
+        regId = "APA91bFjTwhIKqpMrfkItWIn8RHbA3HHHvGjdhs8iRURQ3n2SY6cV30cPw2-CEfAjLWFgYpTc57-X4t2PLXec2ZLGQs2kxTPNejqBrWumOdzHvqZT9qbuo9Y4JFqcROa5dVSMduRxpC9qQtZpdtmV4WanOllaLej6b8Z5ZbklFCQ9m3pe9hUc30"    
+    if receiver_id == 9:
+        regId = "APA91bG6Gc4l753AzdAaAUUGvxY_dsXQJJbI78Qtq7K0VCjrxSEQL3ubfgL-iTHqzHlk5362qTaZrQi-kSb9Nyd6aNr3xzapSFcJA-K3qUYk-_TuwNgMTwpdtZIACNJAvgUMzZZqN_EAooMmXLSDkNUAeGhIhTV2xw"
+    
+    message = sender.pseudo + " would like to meet you"
+
+    # send notification to receiver
+    result = send_notification(regId, message)
+
+    # add in database
+    mr = commute4good.MeetingRequest()
+    mr.accepted = False
+    mr.receiver_lat = receiver.lat
+    mr.sender_lat = sender.lat
+    mr.sent_at = datetime.datetime.now()               
+    mr.receiver_id = receiver.id
+    mr.receiver_lon = receiver.lon
+    mr.sender_id = sender.id
+    mr.sender_lon = sender.lon  
+    pg_session.add(mr)
+    pg_session.commit()
+
+    return "notification3"
+
+    
 @api.route('/notification', methods=['POST'])
 def notification():
      # Check User identification
@@ -425,47 +549,6 @@ def new_user():
 
     return jsonify(data)
 
-
-@api.route('/users/nearest/<int:profile_id>', methods=['GET'])
-def nearest_neighbour(profile_id):
-
-    max_distance = 1.0          # return users closer than 1000m
-    max_returned_users = 50     # return at max 50 users
-
-    ref_user = pg_session.query(commute4good.User).filter_by(id=profile_id).first()
-
-    if ref_user is None:
-        return jsonify({"error": "Not found"}), 404
-
-    connected_users = pg_session.query(commute4good.User).filter_by(connected=True)
-    data = {}
-    neighbours = []
-    for user in connected_users:
-        latlon1 = [ref_user.lat, ref_user.lon]
-        latlon2 = [user.lat, user.lon]
-        d = distance_GPS(latlon1, latlon2, 'linear')
-        # d > 1m to avoid returning the requesting user itself
-        if d < max_distance and d > 0.001:
-            # a good thing to stringify every field to avoid returning a postgres
-            # keyword when field is eg. 'null' or 'true'
-            item = {
-                "id": str(user.id),
-                "firstname": str(user.firstname),
-                "lastname": str(user.lastname),
-                "pseudo": str(user.pseudo),
-                "email": str(user.email),
-                "photo_path": str(user.photo_path),
-                "created_at": str(user.created_at.strftime(DATE_FORMAT)),
-                "last_accessed_at": str(user.last_accessed_at.strftime(DATE_FORMAT)),
-                "lon": str(user.lon),
-                "lat": str(user.lat),
-                "connected": str(user.connected),
-                "distance_km": str(d)
-            }
-            neighbours.append(item)
-
-    data['nearest_neighbours'] = sorted(neighbours, key=lambda neighbour: neighbour['distance_km'])[:max_returned_users]
-    return jsonify(data)
 
 
 def send_notification(regId, message):
