@@ -119,7 +119,8 @@ def new_position():
 @api.route('/users/nearest/<int:profile_id>', methods=['GET'])
 def nearest_neighbour(profile_id):
 
-    max_distance = 0.5  # return users closer than 500m
+    max_distance = 1.0          # return users closer than 1000m
+    max_returned_users = 50     # return at max 50 users
 
     ref_user = pg_session.query(commute4good.User).filter_by(id=profile_id).first()
 
@@ -154,7 +155,7 @@ def nearest_neighbour(profile_id):
             neighbours.append(item)
 
     data['nearest_neighbours'] =  sorted(neighbours,
-        key=lambda neighbour: neighbour['distance_km'])
+        key=lambda neighbour: neighbour['distance_km'])[:max_returned_users]
 
     return jsonify(data)
 
@@ -218,6 +219,55 @@ def user_profil(profil_id):
 
     return jsonify(data)
 
+@api.route('/users', methods=['POST'])
+def new_user():
+    new_user = commute4good.User()
+    pg_session.add(new_user)
+    pg_session.commit()
+    _user_id = new_user.id
+    try:
+        if request.json['firstname'] != "":
+            new_user.firstname = request.json['firstname']
+    except Exception:
+        pass
+
+    try:
+        if request.json['lastname'] != "":
+            new_user.firstname = request.json['lastname']
+    except Exception:
+        pass
+
+    try:
+        if request.json['pseudo'] != "":
+            new_user.firstname = request.json['pseudo']
+    except Exception:
+        pass
+
+    try:
+        if request.json['email'] != "":
+            new_user.firstname = request.json['email']
+    except Exception:
+        pass
+
+    try:
+        if request.json['md5_hash'] != "":
+            new_user.firstname = request.json['md5_hash']
+    except Exception:
+        pass
+
+    try:
+        if request.json['photo_path'] != "":
+            new_user.firstname = request.json['photo_path']
+    except Exception:
+        pass
+
+    new_user.created_at = datetime.now()
+    new_user.last_accessed_at = datetime.now()
+
+    pg_session.add(new_user)
+    pg_session.commit()
+
+    return "yo new user " + str(_user_id) + " !"
 
 @api.route('/tags', methods=['POST'])
 def new_tag():
