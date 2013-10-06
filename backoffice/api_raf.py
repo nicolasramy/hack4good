@@ -50,7 +50,9 @@ engine = create_engine("postgresql://%s:%s@%s:%s/%s" % (config.postgres.username
 Session = sessionmaker(bind=engine)
 pg_session = Session()
 
-
+#########################################################
+#   RETRIEVE GEOLOCATION METHODS
+#########################################################
 @api.route('/geolocation2/<string:str>', methods=['GET'])
 def geolocation2(str):
     params = str.split("-")
@@ -91,7 +93,6 @@ def geolocation2(str):
     return jsonify(data), 200
 
 
-
 @api.route('/geolocation', methods=['POST'])
 def new_position():
     if not request.json or not 'user_id' in request.json or not 'lon' in request.json or not 'lat' in request.json:
@@ -130,8 +131,10 @@ def new_position():
 
     # Send data jsonified as response
     return jsonify(data), 200
-    
 
+######################################################
+#   GET USERS INFO METHODS
+######################################################    
 @api.route('/users/<int:profil_id>', methods=['GET'])
 def user_profil(profil_id):
 
@@ -197,7 +200,9 @@ def user_profil(profil_id):
     return jsonify(data)
 
 
-
+###############################################################
+#   GET NEAREST NEIGHBORS METHODS
+###############################################################
 @api.route('/users/nearest/<int:profile_id>', methods=['GET'])
 def nearest_neighbour(profile_id):
 
@@ -220,6 +225,7 @@ def nearest_neighbour(profile_id):
         if d < max_distance and d > 0.001:
             # a good thing to stringify every field to avoid returning a postgres
             # keyword when field is eg. 'null' or 'true'
+            user_tags = get_user_tags(user)
             item = {
                 "id": str(user.id),
                 "firstname": str(user.firstname),
@@ -232,14 +238,17 @@ def nearest_neighbour(profile_id):
                 "lon": str(user.lon),
                 "lat": str(user.lat),
                 "connected": str(user.connected),
-                "distance_km": str(d)
+                "distance_km": str(d),
+                "user_tags": user_tags
             }
             neighbours.append(item)
 
     data['nearest_neighbours'] = sorted(neighbours, key=lambda neighbour: neighbour['distance_km'])[:max_returned_users]
     return jsonify(data)
 
-
+###########################################################
+#   UPDATE USERS METHODS
+###########################################################
 @api.route('/users', methods=['PUT'])
 def update_user():
 
@@ -312,9 +321,9 @@ def update_user():
     return jsonify(data)
 
 
-
-
-
+####################################################
+#   CREATE TAGS METHODS
+####################################################
 @api.route('/tags', methods=['POST'])
 def new_tag():
     if not request.json or not 'user_id' in request.json or not 'name' in request.json:
@@ -353,7 +362,9 @@ def new_tag():
     # Send data jsonified as response
     return jsonify(data), 200
 
-
+############################################################
+#   LOGIN USER
+############################################################
 @api.route('/users/login', methods=['POST'])
 def create_token():
     # Check User identification
@@ -392,7 +403,11 @@ def create_token():
     return jsonify(data)
 
 
+##############################################################
+#   SEND NOTIFICATION METHODS
+###############################################################
 @api.route('/notification2/<int:receiver_id>', methods=['GET'])
+# GET method where only the receiver_id is used
 def notification2(receiver_id):
     if receiver_id == 8:
         regId = "APA91bFjTwhIKqpMrfkItWIn8RHbA3HHHvGjdhs8iRURQ3n2SY6cV30cPw2-CEfAjLWFgYpTc57-X4t2PLXec2ZLGQs2kxTPNejqBrWumOdzHvqZT9qbuo9Y4JFqcROa5dVSMduRxpC9qQtZpdtmV4WanOllaLej6b8Z5ZbklFCQ9m3pe9hUc30"
@@ -408,42 +423,31 @@ def notification2(receiver_id):
     
     return "yo notification2"
 
-@api.route('/notification3/<int:sender_id>/<int:receiver_id>/', methods=['GET'])
-def notification3(sender_id, receiver_id):
-    # Search users
-    sender = pg_session.query(commute4good.User).filter_by(id=int(request.json['sender_id'])).first()
-    receiver = pg_session.query(commute4good.User).filter_by(id=int(request.json['receiver_id'])).first()
+@api.route('/notification3/<string:str>', methods=['GET'])
+# GET method where both sender_id and receiver_id are used
+def notification3(str):
+    params = str.split("-")
+    sender_id = params[0]
+    receiver_id = params[1]
 
-     # User not found
-    if receiver is None:
-        return jsonify({"error": "Not found"}), 403
+    # Search users
+    sender = pg_session.query(commute4good.User).filter_by(id=sender_id.first())
+    receiver = pg_session.query(commute4good.User).filter_by(id=receiver_id.first())
 
     if receiver_id == 8:
-        regId = "APA91bFjTwhIKqpMrfkItWIn8RHbA3HHHvGjdhs8iRURQ3n2SY6cV30cPw2-CEfAjLWFgYpTc57-X4t2PLXec2ZLGQs2kxTPNejqBrWumOdzHvqZT9qbuo9Y4JFqcROa5dVSMduRxpC9qQtZpdtmV4WanOllaLej6b8Z5ZbklFCQ9m3pe9hUc30"    
+        regId = "APA91bFjTwhIKqpMrfkItWIn8RHbA3HHHvGjdhs8iRURQ3n2SY6cV30cPw2-CEfAjLWFgYpTc57-X4t2PLXec2ZLGQs2kxTPNejqBrWumOdzHvqZT9qbuo9Y4JFqcROa5dVSMduRxpC9qQtZpdtmV4WanOllaLej6b8Z5ZbklFCQ9m3pe9hUc30"
     if receiver_id == 9:
         regId = "APA91bG6Gc4l753AzdAaAUUGvxY_dsXQJJbI78Qtq7K0VCjrxSEQL3ubfgL-iTHqzHlk5362qTaZrQi-kSb9Nyd6aNr3xzapSFcJA-K3qUYk-_TuwNgMTwpdtZIACNJAvgUMzZZqN_EAooMmXLSDkNUAeGhIhTV2xw"
-    
-    message = sender.pseudo + " would like to meet you"
+
+    pseudo = sender.pseudo
+    message = pseudo + " would like to meet you"
 
     # send notification to receiver
-    result = send_notification(regId, message)
-
-    # add in database
-    mr = commute4good.MeetingRequest()
-    mr.accepted = False
-    mr.receiver_lat = receiver.lat
-    mr.sender_lat = sender.lat
-    mr.sent_at = datetime.datetime.now()               
-    mr.receiver_id = receiver.id
-    mr.receiver_lon = receiver.lon
-    mr.sender_id = sender.id
-    mr.sender_lon = sender.lon  
-    pg_session.add(mr)
-    pg_session.commit()
-
-    return "notification3"
-
+    send_notification(regId, message)
     
+    return "yo notification2"
+
+
 @api.route('/notification', methods=['POST'])
 def notification():
      # Check User identification
@@ -550,7 +554,6 @@ def new_user():
     return jsonify(data)
 
 
-
 def send_notification(regId, message):
     # sends a push notification to Google Cloud Messaging
     json_data = {"data" : {
@@ -569,6 +572,16 @@ def send_notification(regId, message):
    
     return {}
 
+def get_user_tags(user):
+    # Create jointure
+    user_tags = pg_session.query(commute4good.UsersTag).filter_by(user_id=user.id)[0:3]
+    
+    tag_names=[]
+    for user_tag in user_tags:
+        tag = pg_session.query(commute4good.Tag).filter_by(id=user_tag.tag_id).first()
+        tag_names.append(tag.name)
+
+    return tag_names
 
 def distance_GPS(latlon1, latlon2, method='method1', clat=COS_LATITUDE):
     """Take as argument two couples of lat,lon coordinates (tuple or list).
