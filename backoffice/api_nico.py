@@ -9,6 +9,7 @@ from flask import Flask, request, jsonify, make_response, abort
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+# commute4good
 import config
 from model import commute4good
 
@@ -18,7 +19,7 @@ api = Flask(__name__)
 
 @api.errorhandler(400)
 def not_found(error):
-    return make_response(jsonify({'error': 'Bad request'}), 400)
+    return make_response(jsonify({'error': 'Invalid data'}), 400)
 
 
 @api.errorhandler(404)
@@ -26,6 +27,7 @@ def not_found(error):
     return make_response(jsonify({'error': 'Not found'}), 404)
 
 
+# Bind engine - postgresql
 engine = create_engine("postgresql://%s:%s@%s:%s/%s" % (config.postgres.username,
                                                         config.postgres.password,
                                                         config.postgres.hostname,
@@ -39,57 +41,54 @@ Session = sessionmaker(bind=engine)
 pg_session = Session()
 
 
-@api.errorhandler(404)
-def not_found(error):
-    return make_response(jsonify({"error": "Not found"}), 404)
-
-
-@api.route('/geoposition', methods=['POST'])
+@api.route('/geolocation', methods=['POST'])
 def new_position():
-    if not request.json or not 'user_id' in request.json \
-    or not 'lon' in request.json or not 'lat' in request.json:
+    if not request.json or not 'user_id' in request.json or not 'lon' in request.json or not 'lat' in request.json:
         abort(400)
 
-    # TODO: Check User
-    # Create jointure
-    geoposition = commute4good.Geoposition()
-    _user_tag.user_id = request.json['user_id']
-    _user_tag.tag_id = tag.id
-    _user_tag.added_at = datetime.datetime.now()
-    pg_session.add(_user_tag)
+    # Check User
+    user = pg_session.query(commute4good.User).filter_by(id=request.json['user_id']).first()
+    if user is None:
+        return jsonify({"error": "Not found"}), 403
+
+    # Update user position
+    user.lon = request.json['lon']
+    user.lat = request.json['lat']
+    user.last_accessed_at = datetime.datetime.now()
+    pg_session.add(user)
     pg_session.commit()
 
+    # Create log
+    geolocation = commute4good.Geolocation()
+    geolocation.user_id = user.id
+    geolocation.lon = request.json['lon']
+    geolocation.lat = request.json['lat']
+    geolocation.created_at = datetime.datetime.now()
+    pg_session.add(geolocation)
+    pg_session.commit()
+
+    # Prepare response data
     data = {
-        "id": _user_tag.id,
-        "user_id": _user_tag.user_id,
-        "tag_id": _user_tag.tag_id,
-        "name": tag.name,
-        "description": tag.description,
-        "popularity": tag.popularity,
-        "added_at": _user_tag.added_at
+        "id": geolocation.id,
+        "user_id": geolocation.user_id,
+        "lon": geolocation.lon,
+        "lat": geolocation.lat,
+        "created_at": geolocation.created_at
     }
 
+    # Send data jsonified as response
     return jsonify(data), 200
-
-    geolocation = {
-        "user_id": request.json['user_id'],
-        "lon": request.json['lon'],
-        "lat": request.json['lat']
-    }
-
-    # Save
-
-    return jsonify(geolocation), 200
 
 
 @api.route('/users/<int:profil_id>', methods=['GET'])
 def user_profil(profil_id):
 
+    # Check User
     user = pg_session.query(commute4good.User).filter_by(id=profil_id).first()
-
     if user is None:
         return jsonify({"error": "Not found"}), 404
 
+    # Prepare response data
     data = {
         "id": user.id,
         "firstname": user.firstname,
@@ -104,6 +103,7 @@ def user_profil(profil_id):
         "connected": user.connected
     }
 
+    # Badges
     user_badges = pg_session.query(commute4good.UsersBadge).filter_by(user_id=profil_id)
     badges = []
     for user_badge in user_badges:
@@ -124,6 +124,7 @@ def user_profil(profil_id):
 
     data["badges"] = badges
 
+    # Tags
     user_tags = pg_session.query(commute4good.UsersTag).filter_by(user_id=profil_id)
     tags = []
     for user_tag in user_tags:
@@ -140,6 +141,7 @@ def user_profil(profil_id):
 
     data["tags"] = tags
 
+    # Send data jsonified as response
     return jsonify(data)
 
 
@@ -160,40 +162,42 @@ def new_tag():
 
     # TODO: Check existence before save
     # Create jointure
-    _user_tag = commute4good.UsersTag()
-    _user_tag.user_id = request.json['user_id']
-    _user_tag.tag_id = tag.id
-    _user_tag.added_at = datetime.datetime.now()
-    pg_session.add(_user_tag)
+    user_tag = commute4good.UsersTag()
+    user_tag.user_id = request.json['user_id']
+    user_tag.tag_id = tag.id
+    user_tag.added_at = datetime.datetime.now()
+    pg_session.add(user_tag)
     pg_session.commit()
 
+    # Prepare response data
     data = {
-        "id": _user_tag.id,
-        "user_id": _user_tag.user_id,
-        "tag_id": _user_tag.tag_id,
+        "id": user_tag.id,
+        "user_id": user_tag.user_id,
+        "tag_id": user_tag.tag_id,
         "name": tag.name,
         "description": tag.description,
         "popularity": tag.popularity,
-        "added_at": _user_tag.added_at
+        "added_at": user_tag.added_at
     }
 
+    # Send data jsonified as response
     return jsonify(data), 200
 
 
 @api.route('/users', methods=['PUT'])
 def update_user():
 
-    if not request.json or not 'user_id':
+    if not request.json or not 'user_id' in request.json:
         abort(400)
 
     user = pg_session.query(commute4good.User).filter_by(id=request.json['user_id']).first()
 
     if user is None:
-        return jsonify({"error": "Not found"}), 404
+        return jsonify({"error": "Not found"}), 403
 
     # TODO: Check user authorization -> 403 on failure
 
-    _user = {}
+    # Update fields
     try:
         if request.json['firstname'] != "":
             user.firstname = request.json['firstname']
@@ -233,6 +237,7 @@ def update_user():
     pg_session.add(user)
     pg_session.commit()
 
+    # Prepare response data
     data = {
         "id": user.id,
         "firstname": user.firstname,
@@ -247,7 +252,47 @@ def update_user():
         "connected": user.connected
     }
 
+    # Send data jsonified as response
     return jsonify(data)
 
+
+@api.route('/users/login', methods=['POST'])
+def create_token():
+    # Check User identification
+    if not request.json or not 'pseudo' in request.json or not 'md5_hash' in request.json:
+        abort(400)
+
+    # Search user
+    user = pg_session.query(commute4good.User).filter_by(pseudo=request.json['pseudo'],
+                                                         md5_hash=request.json['md5_hash']).first()
+
+    # User not found
+    if user is None:
+        return jsonify({"error": "Not found"}), 403
+
+    # Update last connection log
+    user.last_accessed_at = datetime.datetime.now()
+    pg_session.add(user)
+    pg_session.commit()
+
+    # Prepare response data
+    data = {
+        "id": user.id,
+        "firstname": user.firstname,
+        "lastname": user.lastname,
+        "pseudo": user.pseudo,
+        "email": user.email,
+        "photo_path": user.photo_path,
+        "created_at": user.created_at,
+        "last_accessed_at": user.last_accessed_at,
+        "lon": user.lon,
+        "lat": user.lat,
+        "connected": user.connected
+    }
+
+    # Send data jsonified as response
+    return jsonify(data)
+
+# Run as an executable
 if __name__ == '__main__':
     api.run(debug=True)
