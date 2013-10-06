@@ -125,8 +125,8 @@ def user_profil(profil_id):
                 "name": badge.name,
                 "description": badge.description,
                 "icon_path": badge.icon_path,
-                "created_at": badge.created_at.strftime(DATE_FORMAT),
-                "last_earned_at": badge.last_earned_at.strftime(DATE_FORMAT),
+                "created_at": badge.created_at,
+                "last_earned_at": badge.last_earned_at,
                 "popularity": badge.popularity,
                 "min_interactions": badge.min_interactions,
             }
