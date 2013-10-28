@@ -8,6 +8,13 @@ import config
 Base = declarative_base()
 metadata = Base.metadata
 
+def date_tostring(date):
+    DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
+    try:
+        s = date.strftime(DATE_FORMAT)
+    except Exception, e:
+        s = None
+    return s
 
 class Badge(Base):
     __tablename__ = u'badges'
@@ -20,7 +27,19 @@ class Badge(Base):
     last_earned_at = Column(DateTime)
     popularity = Column(BigInteger)
     min_interactions = Column(Integer)
-
+ 
+    def to_dict(self):
+        dict = {
+            "id": self.id,
+            "name": self.name,
+            "description": self.description,
+            "icon_b64": self.icon_b64,
+            "created_at": date_tostring(self.created_at),
+            "last_earned_at": date_tostring(self.last_earned_at),
+            "popularity": self.popularity,
+            "min_interactions": self.min_interactions,
+        }
+        return dict
 
 class Geolocation(Base):
     __tablename__ = u'geolocation'
@@ -30,6 +49,16 @@ class Geolocation(Base):
     lon = Column(Float)
     lat = Column(Float)
     created_at = Column(DateTime)
+
+    def to_dict(self):
+        dict = {
+            "id": self.id,
+            "user_id":   self.user_id,
+            "lon": self.lon ,
+            "lat": self .lat,
+            "created_at ": date_tostring(self.created_at)
+        }
+        return dict
 
 
 class MeetingRequest(Base):
@@ -118,6 +147,14 @@ class Tag(Base):
     description = Column(String(500))
     popularity = Column(BigInteger)
 
+    def to_dict(self):
+        dict = {
+            "id": self.id,
+            "name": self.name,
+            "description": self.description,
+            "popularity": self.popularity
+        }
+        return dict
 
 class TagsTaggroup(Base):
     __tablename__ = u'tags_taggroups'
@@ -143,6 +180,26 @@ class User(Base):
     lat = Column(Float)
     connected = Column(Boolean)
     gcm_reg_id = Column(String(4096))
+
+    def to_dict(self):
+        """
+        return every fields except 'md5_pass'
+        """
+        dict = {
+            "id": self.id,
+            "firstname": self.firstname,
+            "lastname": self.lastname,
+            "pseudo": self.pseudo,
+            "email": self.email,
+            "photo_b64": self.photo_b64,
+            "created_at": date_tostring(self.created_at),
+            "last_accessed_at": date_tostring(self.last_accessed_at),
+            "lon": self.lon,
+            "lat": self.lat,
+            "connected": self.connected,
+            "gcm_reg_id": self.gcm_reg_id
+        }
+        return dict
 
 class UsersBadge(Base):
     __tablename__ = u'users_badges'
