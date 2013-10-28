@@ -21,6 +21,7 @@ from model import commute4good
 LAT_REF = 48.8
 COS_LATITUDE = cos(LAT_REF)
 DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
+API_KEY = "AIzaSyDPIJ60O2lESkHR6DjKru8G3uFpg1xkUzs"
 
 # Flask Application
 api = Flask(__name__)
@@ -645,8 +646,7 @@ def send_notification(regId, message):
     }
 
     url = 'https://android.googleapis.com/gcm/send'
-    apiKey = "AIzaSyDPIJ60O2lESkHR6DjKru8G3uFpg1xkUzs"
-    myKey = "key=" + apiKey
+    myKey = "key=" + API_KEY
     data = json.dumps(json_data)
     headers = {'Content-Type': 'application/json', 'Authorization': myKey}
     req = urllib2.Request(url, data, headers)
