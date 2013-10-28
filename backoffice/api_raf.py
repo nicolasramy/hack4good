@@ -55,22 +55,15 @@ pg_session = Session()
 #   USEFUL METHODS
 #########################################################
 def date_tostring(date):
+    DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
     try:
         s = date.strftime(DATE_FORMAT)
     except Exception, e:
         s = None
     return s
 
-def check_and_update(object_field, request_field):
-    try:
-        if request_field != "":
-            object_field = request_field
-    except Exception:
-        pass
-    return object_field
-
 #########################################################
-#   RETRIEVE GEOLOCATION METHODS
+#   GEOLOCATION METHODS
 #########################################################
 @api.route('/geolocation2/<string:str>', methods=['GET'])
 def geolocation2(str):
@@ -100,13 +93,7 @@ def geolocation2(str):
     pg_session.commit()
 
     # Prepare response data
-    data = {
-        "id": geolocation.id,
-        "user_id": geolocation.user_id,
-        "lon": geolocation.lon,
-        "lat": geolocation.lat,
-        "created_at": date_tostring(geolocation.created_at)
-    }
+    data = geolocation.to_dict()
 
     # Send jsonified data as response
     return jsonify(data), 200
@@ -140,20 +127,22 @@ def new_position():
     pg_session.commit()
 
     # Prepare response data
-    data = {
-        "id": geolocation.id,
-        "user_id": geolocation.user_id,
-        "lon": geolocation.lon,
-        "lat": geolocation.lat,
-        "created_at": date_tostring(geolocation.created_at)
-    }
+    data = geolocation.to_dict()
 
     # Send data jsonified as response
     return jsonify(data), 200
 
-######################################################
-#   GET USERS INFO METHODS
-######################################################    
+
+###########################################################
+#   USERS METHODS :
+#       GET USER INFOS      : /users/<int>          GET
+#       CREATE NEW USER     : /users                POST
+#       UPDATE USER         : /users                PUT
+#       LOG IN USER         : /users/login          POST
+#       GET NEAREST USERS   : /users/nearest/<int>  GET 
+###########################################################
+
+#   GET USER INFOS
 @api.route('/users/<int:profil_id>', methods=['GET'])
 def user_profil(profil_id):
     """
@@ -167,20 +156,7 @@ def user_profil(profil_id):
         return jsonify({"error": "Not found"}), 404
 
     # Prepare response data
-    data = {
-        "id": user.id,
-        "firstname": user.firstname,
-        "lastname": user.lastname,
-        "pseudo": user.pseudo,
-        "email": user.email,
-        "photo_b64": user.photo_b64,
-        "created_at": date_tostring(user.created_at),
-        "last_accessed_at": date_tostring(user.last_accessed_at),
-        "lon": user.lon,
-        "lat": user.lat,
-        "connected": user.connected,
-        "gcm_reg_id": user.gcm_reg_id
-    }
+    data = user.to_dict()
 
     # Badges
     user_badges = pg_session.query(commute4good.UsersBadge).filter_by(user_id=profil_id)
@@ -189,16 +165,7 @@ def user_profil(profil_id):
         badge = pg_session.query(commute4good.Badge).filter_by(id=user_badge.badge_id).first()
 
         if badge is not None:
-            item = {
-                "id": badge.id,
-                "name": badge.name,
-                "description": badge.description,
-                "icon_b64": badge.icon_b64,
-                "created_at": date_tostring(badge.created_at),
-                "last_earned_at": date_tostring(badge.last_earned_at),
-                "popularity": badge.popularity,
-                "min_interactions": badge.min_interactions,
-            }
+            item = badge.to_dict()
             badges.append(item)
 
     data["badges"] = badges
@@ -210,12 +177,7 @@ def user_profil(profil_id):
         tag = pg_session.query(commute4good.Tag).filter_by(id=user_tag.tag_id).first()
 
         if tag is not None:
-            item = {
-                "id": tag.id,
-                "name": tag.name,
-                "description": tag.description,
-                "popularity": tag.popularity
-            }
+            item = tag.to_dict()
             tags.append(item)
 
     data["tags"] = tags
@@ -224,9 +186,189 @@ def user_profil(profil_id):
     return jsonify(data)
 
 
-###############################################################
+#   CREATE USER   
+@api.route('/users', methods=['POST'])
+def new_user():
+    """
+    Creates a new user using post data
+    """
+    user = commute4good.User()
+    pg_session.add(user)
+    pg_session.commit()
+    _user_id = user.id
+
+    # Set fields if they are not empty
+    try:
+        if request.json['firstname'] != "":
+            user.firstname = request.json['firstname']
+    except Exception:
+        pass
+    try:
+        if request.json['lastname'] != "":
+            user.lastname = request.json['lastname']
+    except Exception:
+        pass
+    try:
+        if request.json['pseudo'] != "":
+            user.pseudo = request.json['pseudo']
+    except Exception:
+        pass
+    try:
+        if request.json['email'] != "":
+            user.email = request.json['email']
+    except Exception:
+        pass
+    try:
+        if request.json['md5_pass'] != "":
+            user.md5_pass = request.json['md5_pass']
+    except Exception:
+        pass
+    try:
+        if request.json['photo_b64'] != "":
+            user.photo_b64 = request.json['photo_b64']
+    except Exception:
+        pass
+    try:
+        if request.json['lat'] != "":
+            user.lat = request.json['lat']
+    except Exception:
+        pass
+    try:
+        if request.json['lon'] != "":
+            user.lon = request.json['lon']
+    except Exception:
+        pass
+    try:
+        if request.json['connected'] != "":
+            user.connected = request.json['connected']
+    except Exception:
+        pass
+    try:
+        if request.json['gcm_reg_id'] != "":
+            user.gcm_reg_id = request.json['gcm_reg_id']
+    except Exception:
+        pass
+
+    user.created_at = datetime.datetime.now()
+    user.last_accessed_at = datetime.datetime.now()
+
+    pg_session.add(user)
+    pg_session.commit()
+
+    # Prepare response data
+    data = user.to_dict()
+
+    return jsonify(data)
+
+
+#   UPDATE USER DATA
+@api.route('/users', methods=['PUT'])
+def update_user():
+    """
+    Updates an existing user with PUT data
+    """
+    if not request.json or not 'user_id' in request.json:
+        abort(400)
+
+    user = pg_session.query(commute4good.User).filter_by(id=request.json['user_id']).first()
+
+    if user is None:
+        return jsonify({"error": "Not found"}), 403
+
+    # TODO: Check user authorization -> 403 on failure
+
+    # Update fields if they are not empty
+    try:
+        if request.json['firstname'] != "":
+            user.firstname = request.json['firstname']
+    except Exception:
+        pass
+    try:
+        if request.json['lastname'] != "":
+            user.lastname = request.json['lastname']
+    except Exception:
+        pass
+    try:
+        if request.json['pseudo'] != "":
+            user.pseudo = request.json['pseudo']
+    except Exception:
+        pass
+    try:
+        if request.json['email'] != "":
+            user.email = request.json['email']
+    except Exception:
+        pass
+    try:
+        if request.json['md5_pass'] != "":
+            user.md5_pass = request.json['md5_pass']
+    except Exception:
+        pass
+    try:
+        if request.json['photo_b64'] != "":
+            user.photo_b64 = request.json['photo_b64']
+    except Exception:
+        pass
+    try:
+        if request.json['lat'] != "":
+            user.lat = request.json['lat']
+    except Exception:
+        pass
+    try:
+        if request.json['lon'] != "":
+            user.lon = request.json['lon']
+    except Exception:
+        pass
+    try:
+        if request.json['connected'] != "":
+            user.connected = request.json['connected']
+    except Exception:
+        pass
+    try:
+        if request.json['gcm_reg_id'] != "":
+            user.gcm_reg_id = request.json['gcm_reg_id']
+    except Exception:
+        pass
+
+    user.last_accessed_at = datetime.datetime.now()
+
+    pg_session.add(user)
+    pg_session.commit()
+
+    # Prepare response data
+    data = user.to_dict()
+
+    # Send data jsonified as response
+    return jsonify(data)
+
+
+#   LOGIN USER
+@api.route('/users/login', methods=['POST'])
+def create_token():
+    # Check User identification
+    if not request.json or not 'pseudo' in request.json or not 'md5_pass' in request.json:
+        abort(400)
+
+    # Search user
+    user = pg_session.query(commute4good.User).filter_by(pseudo=request.json['pseudo'],
+                                                         md5_pass=request.json['md5_pass']).first()
+
+    # User not found
+    if user is None:
+        return jsonify({"error": "Not found"}), 403
+
+    # Update last connection log
+    user.last_accessed_at = datetime.datetime.now()
+    pg_session.add(user)
+    pg_session.commit()
+
+    # Prepare response data
+    data = user.to_dict()
+
+    # Send data jsonified as response
+    return jsonify(data)
+
+
 #   GET NEAREST NEIGHBORS METHODS
-###############################################################
 @api.route('/users/nearest/<int:profile_id>', methods=['GET'])
 def nearest_neighbour(profile_id):
     """
@@ -239,6 +381,7 @@ def nearest_neighbour(profile_id):
 
     MAX_DISTANCE = 1.0          # return users closer than 1000m
     MAX_RETURNED_USERS = 10     # return at max 10 users
+    GET_FRIENDS_FIRST = False
 
     ref_user = pg_session.query(commute4good.User).filter_by(id=profile_id).first()
 
@@ -252,130 +395,15 @@ def nearest_neighbour(profile_id):
         latlon1 = [ref_user.lat, ref_user.lon]
         latlon2 = [user.lat, user.lon]
         d = distance_GPS(latlon1, latlon2, 'linear')
-        # d > 1m to avoid returning the requesting user itself
-        if d < MAX_DISTANCE and d > 0.001:
-            # a good thing to stringify every field to avoid returning a postgres
-            # keyword when field is eg. 'null' or 'true'
+        # d > 10cm to avoid returning the requesting user itself
+        if d < MAX_DISTANCE and d > 0.0001:
             user_tags = get_user_tags(user)
-            item = {
-                "id": str(user.id),
-                "firstname": str(user.firstname),
-                "lastname": str(user.lastname),
-                "pseudo": str(user.pseudo),
-                "email": str(user.email),
-                "photo_b64": str(user.photo_b64),
-                "created_at": date_tostring(user.created_at),
-                "last_accessed_at": date_tostring(user.last_accessed_at),
-                "lon": str(user.lon),
-                "lat": str(user.lat),
-                "connected": str(user.connected),
-                "distance_km": str(d),
-                "user_tags": user_tags
-            }
+            item = user.to_dict()
+            item['distance_km'] = d 
+            item['user_tags'] = user_tags
             neighbours.append(item)
 
     data['nearest_neighbours'] = sorted(neighbours, key=lambda neighbour: neighbour['distance_km'])[:MAX_RETURNED_USERS]
-    return jsonify(data)
-
-###########################################################
-#   UPDATE USERS METHODS
-###########################################################
-@api.route('/users', methods=['PUT'])
-def update_user():
-
-    if not request.json or not 'user_id' in request.json:
-        abort(400)
-
-    user = pg_session.query(commute4good.User).filter_by(id=request.json['user_id']).first()
-
-    if user is None:
-        return jsonify({"error": "Not found"}), 403
-
-    # TODO: Check user authorization -> 403 on failure
-
-    # Update fields
-    try:
-        if request.json['firstname'] != "":
-            user.firstname = request.json['firstname']
-    except Exception:
-        pass
-
-    try:
-        if request.json['lastname'] != "":
-            user.lastname = request.json['lastname']
-    except Exception:
-        pass
-
-    try:
-        if request.json['pseudo'] != "":
-            user.pseudo = request.json['pseudo']
-    except Exception:
-        pass
-
-    try:
-        if request.json['email'] != "":
-            user.email = request.json['email']
-    except Exception:
-        pass
-
-    try:
-        if request.json['md5_pass'] != "":
-            user.md5_pass = request.json['md5_pass']
-    except Exception:
-        pass
-
-    try:
-        if request.json['photo_b64'] != "":
-            user.photo_b64 = request.json['photo_b64']
-    except Exception:
-        pass
-
-    try:
-        if request.json['lat'] != "":
-            user.lat = request.json['lat']
-    except Exception:
-        pass
-
-    try:
-        if request.json['lon'] != "":
-            user.lon = request.json['lon']
-    except Exception:
-        pass
-
-    try:
-        if request.json['connected'] != "":
-            user.connected = request.json['connected']
-    except Exception:
-        pass
-
-    try:
-        if request.json['gcm_reg_id'] != "":
-            user.gcm_reg_id = request.json['gcm_reg_id']
-    except Exception:
-        pass
-
-    user.last_accessed_at = datetime.datetime.now()
-
-    pg_session.add(user)
-    pg_session.commit()
-
-    # Prepare response data
-    data = {
-        "id": user.id,
-        "firstname": user.firstname,
-        "lastname": user.lastname,
-        "pseudo": user.pseudo,
-        "email": user.email,
-        "photo_b64": user.photo_b64,
-        "created_at": date_tostring(user.created_at),
-        "last_accessed_at": date_tostring(user.last_accessed_at),
-        "lon": user.lon,
-        "lat": user.lat,
-        "connected": user.connected,
-        "gcm_reg_id": user.gcm_reg_id
-    }
-
-    # Send data jsonified as response
     return jsonify(data)
 
 
@@ -419,46 +447,6 @@ def new_tag():
 
     # Send data jsonified as response
     return jsonify(data), 200
-
-############################################################
-#   LOGIN USER
-############################################################
-@api.route('/users/login', methods=['POST'])
-def create_token():
-    # Check User identification
-    if not request.json or not 'pseudo' in request.json or not 'md5_pass' in request.json:
-        abort(400)
-
-    # Search user
-    user = pg_session.query(commute4good.User).filter_by(pseudo=request.json['pseudo'],
-                                                         md5_pass=request.json['md5_pass']).first()
-
-    # User not found
-    if user is None:
-        return jsonify({"error": "Not found"}), 403
-
-    # Update last connection log
-    user.last_accessed_at = datetime.datetime.now()
-    pg_session.add(user)
-    pg_session.commit()
-
-    # Prepare response data
-    data = {
-        "id": user.id,
-        "firstname": user.firstname,
-        "lastname": user.lastname,
-        "pseudo": user.pseudo,
-        "email": user.email,
-        "photo_b64": user.photo_b64,
-        "created_at": date_tostring(user.created_at),
-        "last_accessed_at": date_tostring(user.last_accessed_at),
-        "lon": user.lon,
-        "lat": user.lat,
-        "connected": user.connected
-    }
-
-    # Send data jsonified as response
-    return jsonify(data)
 
 
 ##############################################################
@@ -508,9 +496,9 @@ def notification3(str):
 
 @api.route('/notification', methods=['POST'])
 def notification():
-     # Check User identification
-    #if not request.json or not 'sender_id' in request.json or not 'receiver_id' in request.json:
-    #    abort(400)
+    # Check User identification
+    if not request.json or not 'sender_id' in request.json or not 'receiver_id' in request.json:
+        abort(400)
 
     # Search users
     sender = pg_session.query(commute4good.User).filter_by(id=int(request.json['sender_id'])).first()
@@ -518,7 +506,7 @@ def notification():
 
      # User not found
     if receiver is None:
-        return jsonify({"error": "Not found2"}), 403
+        return jsonify({"error": "Not found"}), 403
 
     #regId = receiver.regId
     regId = "APA91bFjTwhIKqpMrfkItWIn8RHbA3HHHvGjdhs8iRURQ3n2SY6cV30cPw2-CEfAjLWFgYpTc57-X4t2PLXec2ZLGQs2kxTPNejqBrWumOdzHvqZT9qbuo9Y4JFqcROa5dVSMduRxpC9qQtZpdtmV4WanOllaLej6b8Z5ZbklFCQ9m3pe9hUc30"
@@ -542,100 +530,6 @@ def notification():
     pg_session.commit()
 
     return "todo"
-
-
-
-@api.route('/users', methods=['POST'])
-def new_user():
-    user = commute4good.User()
-    pg_session.add(user)
-    pg_session.commit()
-    _user_id = user.id
-
-        # Update fields
-    try:
-        if request.json['firstname'] != "":
-            user.firstname = request.json['firstname']
-    except Exception:
-        pass
-
-    try:
-        if request.json['lastname'] != "":
-            user.lastname = request.json['lastname']
-    except Exception:
-        pass
-
-    try:
-        if request.json['pseudo'] != "":
-            user.pseudo = request.json['pseudo']
-    except Exception:
-        pass
-
-    try:
-        if request.json['email'] != "":
-            user.email = request.json['email']
-    except Exception:
-        pass
-
-    try:
-        if request.json['md5_pass'] != "":
-            user.md5_pass = request.json['md5_pass']
-    except Exception:
-        pass
-
-    try:
-        if request.json['photo_b64'] != "":
-            user.photo_b64 = request.json['photo_b64']
-    except Exception:
-        pass
-
-    try:
-        if request.json['lat'] != "":
-            user.lat = request.json['lat']
-    except Exception:
-        pass
-
-    try:
-        if request.json['lon'] != "":
-            user.lon = request.json['lon']
-    except Exception:
-        pass
-
-    try:
-        if request.json['connected'] != "":
-            user.connected = request.json['connected']
-    except Exception:
-        pass
-
-    try:
-        if request.json['gcm_reg_id'] != "":
-            user.gcm_reg_id = request.json['gcm_reg_id']
-    except Exception:
-        pass
-
-    user.created_at = datetime.datetime.now()
-    user.last_accessed_at = datetime.datetime.now()
-
-    pg_session.add(user)
-    pg_session.commit()
-
-    # Prepare response data
-    data = {
-        "id": user.id,
-        "firstname": user.firstname,
-        "lastname": user.lastname,
-        "pseudo": user.pseudo,
-        "email": user.email,
-        "photo_b64": user.photo_b64,
-        "created_at": date_tostring(user.created_at),
-        "last_accessed_at": date_tostring(user.last_accessed_at),
-        "lon": user.lon,
-        "lat": user.lat,
-        "connected": user.connected,
-        "gcm_reg_id": user.gcm_reg_id
-    }
-
-    return jsonify(data)
 
 
 def send_notification(regId, message):
