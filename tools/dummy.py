@@ -17,16 +17,16 @@ from faker import Faker
 # Configuration
 import config
 
-coords = {'lon': 48.88, 'lat': 2.33}
-radius = 0.1
+COORDS = {'lon': 48.88, 'lat': 2.33}
+RADIUS = 0.1
 
-range_badges = 15
-range_users = 100
-range_tags = 50
+RANGE_BADGES = 15
+RANGE_USERS = 100
+RANGE_TAGS = 50
 
-step_geolocation = 5
-step_user_badges = 3
-step_user_tags = 3
+STEP_GEOLOCATION = 5
+STEP_USER_BADGES = 3
+STEP_USER_TAGS = 3
 
 if __name__ == '__main__':
 
@@ -58,10 +58,10 @@ if __name__ == '__main__':
     ##
 
     # 1. Badges
-    print "Generate %d badges" % range_badges
+    print "Generate %d badges" % RANGE_BADGES
     t_start = time.time()
 
-    for i in range(range_badges):
+    for i in range(RANGE_BADGES):
         badge = commute4good.Badge()
         badge.name = "Badge %d" % i
         badge.description = "Short description"
@@ -73,12 +73,12 @@ if __name__ == '__main__':
     print "Imported in %f seconds" % (time.time() - t_start)
 
     # 2. Users
-    print "Generate %d users" % range_users
+    print "Generate %d users" % RANGE_USERS
     t_start = time.time()
 
-    for i in range(range_users):
-        lon = coords['lon'] + radius*(random() - 0.5)
-        lat = coords['lat'] + radius*(random() - 0.5)
+    for i in range(RANGE_USERS):
+        lon = COORDS['lon'] + RADIUS*(random() - 0.5)
+        lat = COORDS['lat'] + RADIUS*(random() - 0.5)
         user = commute4good.User()
         user.firstname = f.first_name()
         user.lastname = f.last_name()
@@ -96,10 +96,10 @@ if __name__ == '__main__':
     print "Imported in %f seconds" % (time.time() - t_start)
 
     # 3. Tags
-    print "Generate %d tags" % range_tags
+    print "Generate %d tags" % RANGE_TAGS
     t_start = time.time()
 
-    for i in range(range_tags):
+    for i in range(RANGE_TAGS):
         tag = commute4good.Tag()
 
         lorem = f.lorem()
@@ -118,9 +118,9 @@ if __name__ == '__main__':
     users = session.query(commute4good.User).all()
 
     for user in users:
-        for i in range(randint(1, step_geolocation)):
-            lon = coords['lon'] + radius*(random() - 0.5)
-            lat = coords['lat'] + radius*(random() - 0.5)
+        for i in range(randint(1, STEP_GEOLOCATION)):
+            lon = COORDS['lon'] + RADIUS*(random() - 0.5)
+            lat = COORDS['lat'] + RADIUS*(random() - 0.5)
 
             geolocation = commute4good.Geolocation()
             geolocation.user_id = user.id
@@ -139,10 +139,10 @@ if __name__ == '__main__':
     users = session.query(commute4good.User).all()
 
     for user in users:
-        for i in range(randint(1, step_user_badges)):
+        for i in range(randint(1, STEP_USER_BADGES)):
             user_badge = commute4good.UsersBadge()
             user_badge.user_id = user.id
-            user_badge.badge_id = randint(1, range_badges)
+            user_badge.badge_id = randint(1, RANGE_BADGES)
             user_badge.earned_at = datetime.datetime.now()
             session.add(user_badge)
             session.commit()
@@ -156,10 +156,10 @@ if __name__ == '__main__':
     users = session.query(commute4good.User).all()
 
     for user in users:
-        for i in range(randint(1, step_user_tags)):
+        for i in range(randint(1, STEP_USER_TAGS)):
             user_tag = commute4good.UsersTag()
             user_tag.user_id = user.id
-            user_tag.tag_id = randint(1, range_tags)
+            user_tag.tag_id = randint(1, RANGE_TAGS)
             user_tag.add_at = datetime.datetime.now()
             session.add(user_tag)
             session.commit()
