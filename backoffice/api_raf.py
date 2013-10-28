@@ -51,6 +51,24 @@ Session = sessionmaker(bind=engine)
 pg_session = Session()
 
 #########################################################
+#   USEFUL METHODS
+#########################################################
+def date_tostring(date):
+    try:
+        s = date.strftime(DATE_FORMAT)
+    except Exception, e:
+        s = None
+    return s
+
+def check_and_update(object_field, request_field):
+    try:
+        if request_field != "":
+            object_field = request_field
+    except Exception:
+        pass
+    return object_field
+
+#########################################################
 #   RETRIEVE GEOLOCATION METHODS
 #########################################################
 @api.route('/geolocation2/<string:str>', methods=['GET'])
@@ -86,10 +104,10 @@ def geolocation2(str):
         "user_id": geolocation.user_id,
         "lon": geolocation.lon,
         "lat": geolocation.lat,
-        "created_at": geolocation.created_at.strftime(DATE_FORMAT)
+        "created_at": date_tostring(geolocation.created_at)
     }
 
-    # Send data jsonified as response
+    # Send jsonified data as response
     return jsonify(data), 200
 
 
@@ -126,7 +144,7 @@ def new_position():
         "user_id": geolocation.user_id,
         "lon": geolocation.lon,
         "lat": geolocation.lat,
-        "created_at": geolocation.created_at.strftime(DATE_FORMAT)
+        "created_at": date_tostring(geolocation.created_at)
     }
 
     # Send data jsonified as response
@@ -137,6 +155,10 @@ def new_position():
 ######################################################    
 @api.route('/users/<int:profil_id>', methods=['GET'])
 def user_profil(profil_id):
+    """
+    Return infos concerning user 'profil_id' in a json string, including his 
+    badges and tags
+    """
 
     # Check User
     user = pg_session.query(commute4good.User).filter_by(id=profil_id).first()
@@ -150,12 +172,13 @@ def user_profil(profil_id):
         "lastname": user.lastname,
         "pseudo": user.pseudo,
         "email": user.email,
-        "photo_path": user.photo_path,
-        "created_at": user.created_at.strftime(DATE_FORMAT),
-        "last_accessed_at": user.last_accessed_at.strftime(DATE_FORMAT),
+        "photo_b64": user.photo_b64,
+        "created_at": date_tostring(user.created_at),
+        "last_accessed_at": date_tostring(user.last_accessed_at),
         "lon": user.lon,
         "lat": user.lat,
-        "connected": user.connected
+        "connected": user.connected,
+        "gcm_reg_id": user.gcm_reg_id
     }
 
     # Badges
@@ -169,9 +192,9 @@ def user_profil(profil_id):
                 "id": badge.id,
                 "name": badge.name,
                 "description": badge.description,
-                "icon_path": badge.icon_path,
-                "created_at": badge.created_at,
-                "last_earned_at": badge.last_earned_at,
+                "icon_b64": badge.icon_b64,
+                "created_at": date_tostring(badge.created_at),
+                "last_earned_at": date_tostring(badge.last_earned_at),
                 "popularity": badge.popularity,
                 "min_interactions": badge.min_interactions,
             }
@@ -205,9 +228,16 @@ def user_profil(profil_id):
 ###############################################################
 @api.route('/users/nearest/<int:profile_id>', methods=['GET'])
 def nearest_neighbour(profile_id):
+    """
+    Return nearest neighbours of user 'profile_id'
 
-    max_distance = 1.0          # return users closer than 1000m
-    max_returned_users = 10     # return at max 50 users
+    Returns only :
+        a maximum of MAX_RETURNED_USERS
+        users that are closer than MAX_DISTANCE
+    """
+
+    MAX_DISTANCE = 1.0          # return users closer than 1000m
+    MAX_RETURNED_USERS = 10     # return at max 10 users
 
     ref_user = pg_session.query(commute4good.User).filter_by(id=profile_id).first()
 
@@ -222,7 +252,7 @@ def nearest_neighbour(profile_id):
         latlon2 = [user.lat, user.lon]
         d = distance_GPS(latlon1, latlon2, 'linear')
         # d > 1m to avoid returning the requesting user itself
-        if d < max_distance and d > 0.001:
+        if d < MAX_DISTANCE and d > 0.001:
             # a good thing to stringify every field to avoid returning a postgres
             # keyword when field is eg. 'null' or 'true'
             user_tags = get_user_tags(user)
@@ -232,9 +262,9 @@ def nearest_neighbour(profile_id):
                 "lastname": str(user.lastname),
                 "pseudo": str(user.pseudo),
                 "email": str(user.email),
-                "photo_path": str(user.photo_path),
-                "created_at": str(user.created_at.strftime(DATE_FORMAT)),
-                "last_accessed_at": str(user.last_accessed_at.strftime(DATE_FORMAT)),
+                "photo_b64": str(user.photo_b64),
+                "created_at": date_tostring(user.created_at),
+                "last_accessed_at": date_tostring(user.last_accessed_at),
                 "lon": str(user.lon),
                 "lat": str(user.lat),
                 "connected": str(user.connected),
@@ -243,7 +273,7 @@ def nearest_neighbour(profile_id):
             }
             neighbours.append(item)
 
-    data['nearest_neighbours'] = sorted(neighbours, key=lambda neighbour: neighbour['distance_km'])[:max_returned_users]
+    data['nearest_neighbours'] = sorted(neighbours, key=lambda neighbour: neighbour['distance_km'])[:MAX_RETURNED_USERS]
     return jsonify(data)
 
 ###########################################################
@@ -271,33 +301,59 @@ def update_user():
 
     try:
         if request.json['lastname'] != "":
-            user.firstname = request.json['lastname']
+            user.lastname = request.json['lastname']
     except Exception:
         pass
 
     try:
         if request.json['pseudo'] != "":
-            user.firstname = request.json['pseudo']
+            user.pseudo = request.json['pseudo']
     except Exception:
         pass
 
     try:
         if request.json['email'] != "":
-            user.firstname = request.json['email']
+            user.email = request.json['email']
     except Exception:
         pass
 
     try:
-        if request.json['md5_hash'] != "":
-            user.firstname = request.json['md5_hash']
+        if request.json['md5_pass'] != "":
+            user.md5_pass = request.json['md5_pass']
     except Exception:
         pass
 
     try:
-        if request.json['photo_path'] != "":
-            user.firstname = request.json['photo_path']
+        if request.json['photo_b64'] != "":
+            user.photo_b64 = request.json['photo_b64']
     except Exception:
         pass
+
+    try:
+        if request.json['lat'] != "":
+            user.lat = request.json['lat']
+    except Exception:
+        pass
+
+    try:
+        if request.json['lon'] != "":
+            user.lon = request.json['lon']
+    except Exception:
+        pass
+
+    try:
+        if request.json['connected'] != "":
+            user.connected = request.json['connected']
+    except Exception:
+        pass
+
+    try:
+        if request.json['gcm_reg_id'] != "":
+            user.gcm_reg_id = request.json['gcm_reg_id']
+    except Exception:
+        pass
+
+    user.last_accessed_at = datetime.datetime.now()
 
     pg_session.add(user)
     pg_session.commit()
@@ -309,12 +365,13 @@ def update_user():
         "lastname": user.lastname,
         "pseudo": user.pseudo,
         "email": user.email,
-        "photo_path": user.photo_path,
-        "created_at": user.created_at.strftime(DATE_FORMAT),
-        "last_accessed_at": user.last_accessed_at.strftime(DATE_FORMAT),
+        "photo_b64": user.photo_b64,
+        "created_at": date_tostring(user.created_at),
+        "last_accessed_at": date_tostring(user.last_accessed_at),
         "lon": user.lon,
         "lat": user.lat,
-        "connected": user.connected
+        "connected": user.connected,
+        "gcm_reg_id": user.gcm_reg_id
     }
 
     # Send data jsonified as response
@@ -356,7 +413,7 @@ def new_tag():
         "name": tag.name,
         "description": tag.description,
         "popularity": tag.popularity,
-        "added_at": user_tag.added_at.strftime(DATE_FORMAT)
+        "added_at": date_tostring(user_tag.added_at)
     }
 
     # Send data jsonified as response
@@ -368,12 +425,12 @@ def new_tag():
 @api.route('/users/login', methods=['POST'])
 def create_token():
     # Check User identification
-    if not request.json or not 'pseudo' in request.json or not 'md5_hash' in request.json:
+    if not request.json or not 'pseudo' in request.json or not 'md5_pass' in request.json:
         abort(400)
 
     # Search user
     user = pg_session.query(commute4good.User).filter_by(pseudo=request.json['pseudo'],
-                                                         md5_hash=request.json['md5_hash']).first()
+                                                         md5_pass=request.json['md5_pass']).first()
 
     # User not found
     if user is None:
@@ -391,9 +448,9 @@ def create_token():
         "lastname": user.lastname,
         "pseudo": user.pseudo,
         "email": user.email,
-        "photo_path": user.photo_path,
-        "created_at": user.created_at.strftime(DATE_FORMAT),
-        "last_accessed_at": user.last_accessed_at.strftime(DATE_FORMAT),
+        "photo_b64": user.photo_b64,
+        "created_at": date_tostring(user.created_at),
+        "last_accessed_at": date_tostring(user.last_accessed_at),
         "lon": user.lon,
         "lat": user.lat,
         "connected": user.connected
@@ -494,6 +551,7 @@ def new_user():
     pg_session.commit()
     _user_id = user.id
 
+        # Update fields
     try:
         if request.json['firstname'] != "":
             user.firstname = request.json['firstname']
@@ -502,31 +560,55 @@ def new_user():
 
     try:
         if request.json['lastname'] != "":
-            user.firstname = request.json['lastname']
+            user.lastname = request.json['lastname']
     except Exception:
         pass
 
     try:
         if request.json['pseudo'] != "":
-            user.firstname = request.json['pseudo']
+            user.pseudo = request.json['pseudo']
     except Exception:
         pass
 
     try:
         if request.json['email'] != "":
-            user.firstname = request.json['email']
+            user.email = request.json['email']
     except Exception:
         pass
 
     try:
-        if request.json['md5_hash'] != "":
-            user.firstname = request.json['md5_hash']
+        if request.json['md5_pass'] != "":
+            user.md5_pass = request.json['md5_pass']
     except Exception:
         pass
 
     try:
-        if request.json['photo_path'] != "":
-            user.firstname = request.json['photo_path']
+        if request.json['photo_b64'] != "":
+            user.photo_b64 = request.json['photo_b64']
+    except Exception:
+        pass
+
+    try:
+        if request.json['lat'] != "":
+            user.lat = request.json['lat']
+    except Exception:
+        pass
+
+    try:
+        if request.json['lon'] != "":
+            user.lon = request.json['lon']
+    except Exception:
+        pass
+
+    try:
+        if request.json['connected'] != "":
+            user.connected = request.json['connected']
+    except Exception:
+        pass
+
+    try:
+        if request.json['gcm_reg_id'] != "":
+            user.gcm_reg_id = request.json['gcm_reg_id']
     except Exception:
         pass
 
@@ -543,12 +625,13 @@ def new_user():
         "lastname": user.lastname,
         "pseudo": user.pseudo,
         "email": user.email,
-        "photo_path": user.photo_path,
-        "created_at": user.created_at.strftime(DATE_FORMAT),
-        "last_accessed_at": user.last_accessed_at.strftime(DATE_FORMAT),
+        "photo_b64": user.photo_b64,
+        "created_at": date_tostring(user.created_at),
+        "last_accessed_at": date_tostring(user.last_accessed_at),
         "lon": user.lon,
         "lat": user.lat,
-        "connected": user.connected
+        "connected": user.connected,
+        "gcm_reg_id": user.gcm_reg_id
     }
 
     return jsonify(data)
@@ -570,7 +653,7 @@ def send_notification(regId, message):
     f = urllib2.urlopen(req)
     response = json.loads(f.read())
    
-    return {}
+    return response
 
 def get_user_tags(user):
     # Create jointure
