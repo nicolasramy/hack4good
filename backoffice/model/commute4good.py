@@ -53,9 +53,9 @@ class Geolocation(Base):
     def to_dict(self):
         dict = {
             "id": self.id,
-            "user_id":   self.user_id,
+            "user_id": self.user_id,
             "lon": self.lon ,
-            "lat": self .lat,
+            "lat": self.lat,
             "created_at ": date_tostring(self.created_at)
         }
         return dict
@@ -95,6 +95,18 @@ class PrivatechatsMessage(Base):
     lat = Column(Float)
     lon = Column(Float)
 
+    def to_dict(self):
+        dict = {
+            "id": self.id,
+            "privatechat_id":   self.privatechat_id,
+            "sender_id": self.sender_id,
+            "content": self.content,
+            "created_at ": date_tostring(self.created_at),
+            "lat": self.lat,
+            "lon": self.lon
+        }
+        return dict
+
 
 class PrivatechatsUser(Base):
     __tablename__ = u'privatechats_users'
@@ -105,13 +117,6 @@ class PrivatechatsUser(Base):
     invited_by = Column(BigInteger)
     joined_at = Column(DateTime)
     left_at = Column(DateTime)
-
-
-class PublicchatsCluster(Base):
-    __tablename__ = u'publicchats_clusters'
-
-    id = Column(BigInteger, primary_key=True)
-    cluster_description = Column(String(255))
 
 
 class PublicchatsMessage(Base):
@@ -125,9 +130,6 @@ class PublicchatsMessage(Base):
     lon = Column(Float)
     lat_speed = Column(Float)
     lon_speed = Column(Float)
-    cluster1_id = Column(BigInteger)
-    cluster2_id = Column(BigInteger)
-    cluster3_id = Column(BigInteger)
 
 
 class Taggroup(Base):
