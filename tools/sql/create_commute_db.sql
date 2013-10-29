@@ -142,15 +142,6 @@ CREATE TABLE privatechats_messages (
 -- PUBLIC CHAT
 -- ############################################################################
 
--- We have a different logic here because we are going to cluster public messages
--- automatically based on location, speed and time
--- Actually we are not going to be able to do this properly with an SQL DB
-CREATE TABLE publicchats_clusters (
-    id serial8,
-    cluster_description varchar(255),
-    CONSTRAINT publicchats_pkey PRIMARY KEY (id)
-);
-
 --
 CREATE TABLE publicchats_messages (
     id serial8,
@@ -160,10 +151,7 @@ CREATE TABLE publicchats_messages (
     lat float4,
     lon float4,
     lat_speed float4,
-    lon_speed float4,
-    cluster1_id bigint, -- cluster1 = main cluster, etc... this classification 
-    cluster2_id bigint, -- sucks but we keep it until we can do better, which will
-    cluster3_id bigint, -- require a NoSQL DB
+    lon_speed float4
     CONSTRAINT publicchat_messages_pkey PRIMARY KEY (id)
 );
 
