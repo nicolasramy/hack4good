@@ -1,4 +1,9 @@
 --
+-- TO CREATE TABLES IN commute4good DATABASE, EXECUTE NEXT COMMAND IN A SHELL
+-- (ADD RELEVENT PATH IN FRONT OF SQL FILE IF NECESSARY)
+-- psql -h localhost -p 5432 -U postgres -d commute4good -f drop_all_tables_commute_db.sql
+
+--
 -- USERS DESCRIPTION
 --
 CREATE TABLE users (
@@ -151,8 +156,6 @@ CREATE TABLE publicchats_messages (
     lat float4,
     lon float4,
     lat_speed float4,
-    lon_speed float4
-    CONSTRAINT publicchat_messages_pkey PRIMARY KEY (id)
+    lon_speed float4,
+    CONSTRAINT publicchats_messages_pkey PRIMARY KEY (id)
 );
-
-
