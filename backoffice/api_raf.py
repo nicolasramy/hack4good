@@ -562,12 +562,6 @@ def new_privatechat_message():
 
     return jsonify(data)
 
-###############################################################
-#   GET NEAREST STATIONS AND TRAINS
-###############################################################
-@api.route('/nearest-stations/<int:lat>/<int:lon>', methods=['GET'])
-def nearest_stations(lat, lon):
-    pass
 
 
 ###############################################################
