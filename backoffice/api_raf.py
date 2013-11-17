@@ -721,7 +721,7 @@ def notification():
 
     # add in database
     mr = commute4good.MeetingRequest()
-    mr.accepted = False
+    mr.accepted = True
     mr.receiver_lat = receiver.lat
     mr.sender_lat = sender.lat
     mr.sent_at = datetime.datetime.now()               
