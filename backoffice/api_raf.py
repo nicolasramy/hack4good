@@ -568,8 +568,8 @@ def new_privatechat_message():
 #       POST NEW MESSAGE    : /public-chat/            POST
 ######################################################################
 #   GET LATEST MESSAGES
-@api.route('/public-chat/', methods=['GET'])
-def latest_publicchat_messages():
+@api.route('/public-chat/<int:user_id>', methods=['GET'])
+def latest_publicchat_messages(user_id):
     MAX_RETURNED_MESSAGES = 50
 
     pms = pg_session.query(commute4good.PublicchatsMessage)
