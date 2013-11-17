@@ -132,6 +132,19 @@ class PublicchatsMessage(Base):
     lon_speed = Column(Float)
 
 
+    def to_dict(self):
+        dict = {
+            "id": self.id,
+            "sender_id": self.sender_id,
+            "content": self.content,
+            "created_at ": date_tostring(self.created_at),
+            "lat": self.lat,
+            "lon": self.lon,
+            "lat_speed": self.lat_speed,
+            "lon_speed": self.lon_speed
+        }
+        return dict
+
 class Taggroup(Base):
     __tablename__ = u'taggroups'
 
