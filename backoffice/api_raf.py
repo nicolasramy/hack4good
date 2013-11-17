@@ -433,7 +433,7 @@ def nearest_neighbour(profile_id):
         # d > 10cm to avoid returning the requesting user itself
         if d < MAX_DISTANCE and d > 0.0001:
             pending = 0
-            if (my_requests.filter_by(receiver_id=user.id) is None):
+            if (my_requests.filter_by(receiver_id=user.id).first() is None):
                 pending = 0
             elif my_requests.filter_by(receiver_id=user.id).first().accepted:
                 pending = 2
