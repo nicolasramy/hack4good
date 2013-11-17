@@ -435,7 +435,7 @@ def nearest_neighbour(profile_id):
             pending = 0
             if (my_requests.filter_by(receiver_id=user.id) is None):
                 pending = 0
-            elif my_requests.filter_by(receiver_id=user.id).accepted:
+            elif my_requests.filter_by(receiver_id=user.id).first().accepted:
                 pending = 2
             else:
                 pending = 1
