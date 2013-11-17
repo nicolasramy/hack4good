@@ -57,9 +57,9 @@ pg_session = Session()
 # Connect to GIS database
 conn = psycopg2.connect(host="localhost", port=5432, database="gisdatabase", user="postgres", password="plop")
 
-#########################################################
-#   GET NEAREST STATIONS
-#########################################################
+################################################################
+#   GET NEAREST STATIONS    : /nearest-stations/<lat>/<lon> GET
+################################################################
 # Return the 5 nearest stations
 @api.route('/nearest-stations/<float:lat>/<float:lon>', methods=['GET'])
 def nearest_stations(lat, lon):
@@ -493,7 +493,90 @@ def new_tag():
 def latest_privatechat_messages(chat_id):
     MAX_RETURNED_MESSAGES = 50
 
-    pms = pg_session.query(commute4good.PrivatechatsMessage).filter_by(privatechat_id=chat_id)
+    pbms = pg_session.query(commute4good.PrivatechatsMessage)
+    if pbms is None:
+        return jsonify({"error": "No public chat with this id"}), 403
+
+    # TODO: Check user authorization -> 403 on failure
+
+    # Retrieve all messages from the given private chat
+    data = {}
+    messages = []
+    for pm in pbms:
+        item = pm.to_dict()
+        messages.append(item)
+
+    #data['latest_messages']=messages
+    data['latest_messages'] = sorted(messages, key=lambda message: message['created_at'], reverse=True)[:MAX_RETURNED_MESSAGES]
+    return jsonify(data) 
+
+#   POST NEW MESSAGE
+@api.route('/public-chat', methods=['POST'])
+def new_privatechat_message():
+    """
+    Creates a new pb_mess using post data
+    """
+    if not request.json or not 'sender_id' in request.json:
+        abort(400)
+
+    pb_mess = commute4good.PublicchatsMessage()
+    pg_session.add(pb_mess)
+    pg_session.commit()
+    _pb_mess_id = pb_mess.id
+
+    # Set fields if they are not empty
+    try:
+        if request.json['sender_id'] != "":
+            pb_mess.sender_id = request.json['sender_id']
+    except Exception:
+        pass
+    try:
+        if request.json['content'] != "":
+            pb_mess.content = request.json['content']
+    except Exception:
+        pass
+    try:
+        if request.json['lat'] != "":
+            pb_mess.lat = request.json['lat']
+    except Exception:
+        pass
+    try:
+        if request.json['lon'] != "":
+            pb_mess.lon = request.json['lon']
+    except Exception:
+        pass
+    try:
+        if request.json['lat_speed'] != "":
+            pb_mess.lat_speed = request.json['lat_speed']
+    except Exception:
+        pass
+    try:
+        if request.json['lon_speed'] != "":
+            pb_mess.lon_speed = request.json['lon_speed']
+    except Exception:
+        pass
+
+    pb_mess.created_at = datetime.datetime.now()
+
+    pg_session.add(pb_mess)
+    pg_session.commit()
+
+    # Prepare response data
+    data = pb_mess.to_dict()
+
+    return jsonify(data)
+
+######################################################################
+#   PUBLIC MESSAGES METHODS
+#       GET LATEST MESSAGES : /public-chat/<int>       GET
+#       POST NEW MESSAGE    : /public-chat/            POST
+######################################################################
+#   GET LATEST MESSAGES
+@api.route('/public-chat/<int:chat_id>', methods=['GET'])
+def latest_publicchat_messages(chat_id):
+    MAX_RETURNED_MESSAGES = 50
+
+    pms = pg_session.query(commute4good.PublicchatsMessage).filter_by(privatechat_id=chat_id)
 
     if pms is None:
         return jsonify({"error": "No private chat with this id"}), 403
@@ -561,8 +644,6 @@ def new_privatechat_message():
     data = pr_mess.to_dict()
 
     return jsonify(data)
-
-
 
 ###############################################################
 #   SEND NOTIFICATION METHODS
