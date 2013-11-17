@@ -418,7 +418,7 @@ def nearest_neighbour(profile_id):
     GET_FRIENDS_FIRST = False
 
     ref_user = pg_session.query(commute4good.User).filter_by(id=profile_id).first()
-    invited_users = pg_session.query(commute4good.MeetingRequest).filter_by(sender_id=profile_id)
+    my_requests = pg_session.query(commute4good.MeetingRequest).filter_by(sender_id=profile_id)
 
     if ref_user is None:
         return jsonify({"error": "Not found"}), 404
@@ -432,11 +432,18 @@ def nearest_neighbour(profile_id):
         d = distance_GPS(latlon1, latlon2, 'linear')
         # d > 10cm to avoid returning the requesting user itself
         if d < MAX_DISTANCE and d > 0.0001:
+            pending = 0
+            if (my_requests.filter_by(receiver_id=user.id) is None):
+                pending = 0
+            elif my_requests.filter_by(receiver_id=user.id).accepted == False:
+                pending = 1
+            else:
+                pending = 2
             user_tags = get_user_tags(user)
             item = user.to_dict()
             item['distance_km'] = d 
             item['user_tags'] = user_tags
-            item['invited'] = 0
+            item['invited'] = pending
             neighbours.append(item)
 
     data['nearest_neighbours'] = sorted(neighbours, key=lambda neighbour: neighbour['distance_km'])[:MAX_RETURNED_USERS]
