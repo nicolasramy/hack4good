@@ -568,7 +568,7 @@ def new_privatechat_message():
 #       POST NEW MESSAGE    : /public-chat/            POST
 ######################################################################
 #   GET LATEST MESSAGES
-@api.route('/public-chat/', methods=['GET'])
+@api.route('/public-chat', methods=['GET'])
 def latest_publicchat_messages():
     MAX_RETURNED_MESSAGES = 50
 
