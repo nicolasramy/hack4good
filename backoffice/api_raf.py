@@ -76,7 +76,6 @@ def nearest_stations(lat, lon):
     for row in range(len(record_list)):
         item = {} # une station particulière
         for column in range(len(cur.description)):
-            pass)):
             item[cur.description[column].name] = record_list[row][column]
         neighbours_stations.append(item)
 
