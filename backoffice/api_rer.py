@@ -14,7 +14,7 @@ from sqlalchemy.orm import sessionmaker
 # Computes distance
 from numpy import arccos, arcsin, cos, sin, sqrt, pi
 
-# commute4good
+## commute4good
 import config
 from model import commute4good
 import psycopg2
@@ -33,16 +33,22 @@ cur = conn.cursor()
 #cur.execute("INSERT INTO test (num, data) VALUES (%s, %s)", (100, "abc'def"))
 
 # Query the database and obtain data as Python objects
-req = "SELECT name, ST_ASTEXT(way), ref, operator, ST_Distance(ST_PointFromText('POINT(2.371886 48.879860)',4326),ST_transform(way,4326),true) AS dist " 
+req = "SELECT name, ST_X(way) as lon, ST_Y(way) as lat, ref, operator, ST_Distance(ST_PointFromText('POINT(%s %s)',4326),ST_transform(way,4326),true) AS dist " 
 req += "FROM planet_osm_point WHERE railway = 'station' ORDER BY dist ASC limit 5;"
-cur.execute(req)
-record_list  = cur.fetchall()
-dict_stations = {}
+cur.execute(req, 2.371886, 48.879860)
+record_list = cur.fetchall()
+data = {}
+neighbours_stations = []
 for row in range(len(record_list)):
-	for column in range(len(description)):
-		dict_stations[cur.description[column].name] = record_list[row]
+	item = {} # une station particulière
+	for column in range(len(cur.description)):
+		pass)):
+		item[cur.description[column].name] = record_list[row][column]
+	neighbours_stations.append(item)
 
-print dict_stations
+data['nearest_stations'] = neighbours_stations
+
+print jsonify(data)
 # Make the changes to the database persistent
 conn.commit()
 
