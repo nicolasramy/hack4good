@@ -418,6 +418,7 @@ def nearest_neighbour(profile_id):
     GET_FRIENDS_FIRST = False
 
     ref_user = pg_session.query(commute4good.User).filter_by(id=profile_id).first()
+    invited_users = pg_session.query(commute4good.MeetingRequest).filter_by(sender_id=profile_id)
 
     if ref_user is None:
         return jsonify({"error": "Not found"}), 404
@@ -435,6 +436,7 @@ def nearest_neighbour(profile_id):
             item = user.to_dict()
             item['distance_km'] = d 
             item['user_tags'] = user_tags
+            item['invited'] = 0
             neighbours.append(item)
 
     data['nearest_neighbours'] = sorted(neighbours, key=lambda neighbour: neighbour['distance_km'])[:MAX_RETURNED_USERS]
@@ -648,46 +650,46 @@ def new_publicchat_message():
 ###############################################################
 #   SEND NOTIFICATION METHODS
 ###############################################################
-@api.route('/notification2/<int:receiver_id>', methods=['GET'])
-# GET method where only the receiver_id is used
-def notification2(receiver_id):
-    if receiver_id == 8:
-        regId = "APA91bFjTwhIKqpMrfkItWIn8RHbA3HHHvGjdhs8iRURQ3n2SY6cV30cPw2-CEfAjLWFgYpTc57-X4t2PLXec2ZLGQs2kxTPNejqBrWumOdzHvqZT9qbuo9Y4JFqcROa5dVSMduRxpC9qQtZpdtmV4WanOllaLej6b8Z5ZbklFCQ9m3pe9hUc30"
-        pseudo = "Iva"
-    if receiver_id == 9:
-        regId = "APA91bG6Gc4l753AzdAaAUUGvxY_dsXQJJbI78Qtq7K0VCjrxSEQL3ubfgL-iTHqzHlk5362qTaZrQi-kSb9Nyd6aNr3xzapSFcJA-K3qUYk-_TuwNgMTwpdtZIACNJAvgUMzZZqN_EAooMmXLSDkNUAeGhIhTV2xw"
-        pseudo = "Martine"
+# @api.route('/notification2/<int:receiver_id>', methods=['GET'])
+# # GET method where only the receiver_id is used
+# def notification2(receiver_id):
+#     if receiver_id == 8:
+#         regId = "APA91bFjTwhIKqpMrfkItWIn8RHbA3HHHvGjdhs8iRURQ3n2SY6cV30cPw2-CEfAjLWFgYpTc57-X4t2PLXec2ZLGQs2kxTPNejqBrWumOdzHvqZT9qbuo9Y4JFqcROa5dVSMduRxpC9qQtZpdtmV4WanOllaLej6b8Z5ZbklFCQ9m3pe9hUc30"
+#         pseudo = "Iva"
+#     if receiver_id == 9:
+#         regId = "APA91bG6Gc4l753AzdAaAUUGvxY_dsXQJJbI78Qtq7K0VCjrxSEQL3ubfgL-iTHqzHlk5362qTaZrQi-kSb9Nyd6aNr3xzapSFcJA-K3qUYk-_TuwNgMTwpdtZIACNJAvgUMzZZqN_EAooMmXLSDkNUAeGhIhTV2xw"
+#         pseudo = "Martine"
     
-    message = pseudo+ " would like to meet you"
+#     message = pseudo+ " would like to meet you"
 
-    # send notification to receiver
-    send_notification(regId, message)
+#     # send notification to receiver
+#     send_notification(regId, message)
     
-    return "yo notification2"
+#     return "yo notification2"
 
-@api.route('/notification3/<string:str>', methods=['GET'])
-# GET method where both sender_id and receiver_id are used
-def notification3(str):
-    params = str.split("-")
-    sender_id = params[0]
-    receiver_id = params[1]
+# @api.route('/notification3/<string:str>', methods=['GET'])
+# # GET method where both sender_id and receiver_id are used
+# def notification3(str):
+#     params = str.split("-")
+#     sender_id = params[0]
+#     receiver_id = params[1]
 
-    # Search users
-    sender = pg_session.query(commute4good.User).filter_by(id=sender_id.first())
-    receiver = pg_session.query(commute4good.User).filter_by(id=receiver_id.first())
+#     # Search users
+#     sender = pg_session.query(commute4good.User).filter_by(id=sender_id.first())
+#     receiver = pg_session.query(commute4good.User).filter_by(id=receiver_id.first())
 
-    if receiver_id == 8:
-        regId = "APA91bFjTwhIKqpMrfkItWIn8RHbA3HHHvGjdhs8iRURQ3n2SY6cV30cPw2-CEfAjLWFgYpTc57-X4t2PLXec2ZLGQs2kxTPNejqBrWumOdzHvqZT9qbuo9Y4JFqcROa5dVSMduRxpC9qQtZpdtmV4WanOllaLej6b8Z5ZbklFCQ9m3pe9hUc30"
-    if receiver_id == 9:
-        regId = "APA91bG6Gc4l753AzdAaAUUGvxY_dsXQJJbI78Qtq7K0VCjrxSEQL3ubfgL-iTHqzHlk5362qTaZrQi-kSb9Nyd6aNr3xzapSFcJA-K3qUYk-_TuwNgMTwpdtZIACNJAvgUMzZZqN_EAooMmXLSDkNUAeGhIhTV2xw"
+#     if receiver_id == 8:
+#         regId = "APA91bFjTwhIKqpMrfkItWIn8RHbA3HHHvGjdhs8iRURQ3n2SY6cV30cPw2-CEfAjLWFgYpTc57-X4t2PLXec2ZLGQs2kxTPNejqBrWumOdzHvqZT9qbuo9Y4JFqcROa5dVSMduRxpC9qQtZpdtmV4WanOllaLej6b8Z5ZbklFCQ9m3pe9hUc30"
+#     if receiver_id == 9:
+#         regId = "APA91bG6Gc4l753AzdAaAUUGvxY_dsXQJJbI78Qtq7K0VCjrxSEQL3ubfgL-iTHqzHlk5362qTaZrQi-kSb9Nyd6aNr3xzapSFcJA-K3qUYk-_TuwNgMTwpdtZIACNJAvgUMzZZqN_EAooMmXLSDkNUAeGhIhTV2xw"
 
-    pseudo = sender.pseudo
-    message = pseudo + " would like to meet you"
+#     pseudo = sender.pseudo
+#     message = pseudo + " would like to meet you"
 
-    # send notification to receiver
-    send_notification(regId, message)
+#     # send notification to receiver
+#     send_notification(regId, message)
     
-    return "yo notification2"
+#     return "yo notification2"
 
 
 @api.route('/notification', methods=['POST'])
@@ -711,7 +713,6 @@ def notification():
     result = send_notification(receiver.gcm_reg_id, message)
 
     # add in database
-
     mr = commute4good.MeetingRequest()
     mr.accepted = False
     mr.receiver_lat = receiver.lat
