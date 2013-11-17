@@ -585,8 +585,8 @@ def latest_publicchat_messages(user_id):
         item = pm.to_dict()
         messages.append(item)
 
-    #data['latest_messages']=messages
-    data['latest_messages'] = sorted(messages, key=lambda message: message['created_at'], reverse=True)[:MAX_RETURNED_MESSAGES]
+    data['latest_messages']=messages
+    #data['latest_messages'] = sorted(messages, key=lambda message: message['created_at'], reverse=True)[:MAX_RETURNED_MESSAGES]
     return jsonify(data) 
 
 #   POST NEW MESSAGE
