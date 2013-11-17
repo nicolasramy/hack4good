@@ -68,7 +68,7 @@ def generate_users(number):
         user.last_accessed_at = datetime.datetime.now()
         user.lon = lon
         user.lat = lat
-        user.md5_hash = hashlib.md5(user.pseudo).hexdigest() # password = pseudo
+        user.md5_pass = hashlib.md5(user.pseudo).hexdigest() # password = pseudo
         user.connected = True
         session.add(user)
     session.commit()

@@ -18,6 +18,9 @@ from numpy import arccos, arcsin, cos, sin, sqrt, pi
 import config
 from model import commute4good
 
+# Direct connection to the database
+import psycopg2
+
 LAT_REF = 48.8
 COS_LATITUDE = cos(LAT_REF)
 DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
@@ -50,6 +53,7 @@ engine = create_engine("postgresql://%s:%s@%s:%s/%s" % (config.postgres.username
 # Start session
 Session = sessionmaker(bind=engine)
 pg_session = Session()
+
 
 #########################################################
 #   USEFUL METHODS
@@ -528,6 +532,12 @@ def new_privatechat_message():
 
     return jsonify(data)
 
+###############################################################
+#   GET NEAREST STATIONS AND TRAINS
+###############################################################
+@api.route('/nearest-stations/<int:lat>/<int:lon>', methods=['GET'])
+def nearest_stations(lat, lon):
+    pass
 
 
 ###############################################################
@@ -589,12 +599,11 @@ def notification():
     if receiver is None:
         return jsonify({"error": "Not found"}), 403
 
-    #regId = receiver.regId
-    regId = "APA91bFjTwhIKqpMrfkItWIn8RHbA3HHHvGjdhs8iRURQ3n2SY6cV30cPw2-CEfAjLWFgYpTc57-X4t2PLXec2ZLGQs2kxTPNejqBrWumOdzHvqZT9qbuo9Y4JFqcROa5dVSMduRxpC9qQtZpdtmV4WanOllaLej6b8Z5ZbklFCQ9m3pe9hUc30"
+    #regId = "APA91bFjTwhIKqpMrfkItWIn8RHbA3HHHvGjdhs8iRURQ3n2SY6cV30cPw2-CEfAjLWFgYpTc57-X4t2PLXec2ZLGQs2kxTPNejqBrWumOdzHvqZT9qbuo9Y4JFqcROa5dVSMduRxpC9qQtZpdtmV4WanOllaLej6b8Z5ZbklFCQ9m3pe9hUc30"
     message = sender.pseudo + " would like to meet you"
 
     # send notification to receiver
-    result = send_notification(regId, message)
+    result = send_notification(receiver.gcm_reg_id, message)
 
     # add in database
 
