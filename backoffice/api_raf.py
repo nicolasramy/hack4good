@@ -435,10 +435,10 @@ def nearest_neighbour(profile_id):
             pending = 0
             if (my_requests.filter_by(receiver_id=user.id) is None):
                 pending = 0
-            elif my_requests.filter_by(receiver_id=user.id).accepted == False:
-                pending = 1
-            else:
+            elif my_requests.filter_by(receiver_id=user.id).accepted:
                 pending = 2
+            else:
+                pending = 1
             user_tags = get_user_tags(user)
             item = user.to_dict()
             item['distance_km'] = d 
