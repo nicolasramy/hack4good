@@ -581,7 +581,7 @@ def new_privatechat_message():
 def latest_publicchat_messages(user_id):
     MAX_RETURNED_MESSAGES = 50
 
-    pms = pg_session.query(commute4good.PublicchatsMessage)
+    pms = pg_session.query(commute4good.PublicchatsMessage).order_by(commute4good.PublicchatsMessage.created_at)
     if pms is None:
         return jsonify({"error": "No private chat with this id"}), 403
 
