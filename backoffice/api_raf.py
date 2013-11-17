@@ -600,7 +600,7 @@ def notification():
         return jsonify({"error": "Not found"}), 403
 
     #regId = "APA91bFjTwhIKqpMrfkItWIn8RHbA3HHHvGjdhs8iRURQ3n2SY6cV30cPw2-CEfAjLWFgYpTc57-X4t2PLXec2ZLGQs2kxTPNejqBrWumOdzHvqZT9qbuo9Y4JFqcROa5dVSMduRxpC9qQtZpdtmV4WanOllaLej6b8Z5ZbklFCQ9m3pe9hUc30"
-    message = sender.pseudo + " would like to meet you"
+    message = sender.firstname + " would like to meet you"
 
     # send notification to receiver
     result = send_notification(receiver.gcm_reg_id, message)
