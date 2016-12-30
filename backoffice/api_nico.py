@@ -213,31 +213,31 @@ def update_user():
 
     try:
         if request.json['lastname'] != "":
-            user.firstname = request.json['lastname']
+            user.lastname = request.json['lastname']
     except Exception:
         pass
 
     try:
         if request.json['pseudo'] != "":
-            user.firstname = request.json['pseudo']
+            user.pseudo = request.json['pseudo']
     except Exception:
         pass
 
     try:
         if request.json['email'] != "":
-            user.firstname = request.json['email']
+            user.email = request.json['email']
     except Exception:
         pass
 
     try:
         if request.json['md5_hash'] != "":
-            user.firstname = request.json['md5_hash']
+            user.md5_hash = request.json['md5_hash']
     except Exception:
         pass
 
     try:
         if request.json['photo_path'] != "":
-            user.firstname = request.json['photo_path']
+            user.photo_path = request.json['photo_path']
     except Exception:
         pass
 
